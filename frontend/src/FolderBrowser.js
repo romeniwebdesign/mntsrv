@@ -172,8 +172,22 @@ function FolderBrowser({ token }) {
                     navigate("/browse" + (bc.rel ? "/" + bc.rel : ""));
                   }
                 }}
+                className={isLast ? "d-flex align-items-center" : undefined}
               >
                 {bc.name}
+                {isLast && (
+                  <Button
+                    size="sm"
+                    variant="outline-success"
+                    className="ms-2"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setSharePath(path);
+                    }}
+                  >
+                    Freigeben
+                  </Button>
+                )}
               </Breadcrumb.Item>
             );
           })}
