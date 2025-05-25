@@ -68,7 +68,7 @@ jobs:
               MAJOR=$((MAJOR + 1))
               MINOR=0
               PATCH=0
-            elif echo "$COMMITS" | grep -q "^feat\|^feature"; then
+            elif echo "$COMMITS" | grep -q "^feat(\(.+\))?:"; then
               # Minor version bump for new features
               MINOR=$((MINOR + 1))
               PATCH=0
