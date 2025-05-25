@@ -63,18 +63,18 @@ jobs:
             # Check commit messages for version bump type
             COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s" 2>/dev/null || git log --pretty=format:"%s")
             
-            if echo "$COMMITS" | grep -q "^feat\|^feature"; then
+            if echo "$COMMITS" | grep -q "BREAKING CHANGE\|^feat!:\|^fix!:"; then
+              # Major version bump for breaking changes
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+            elif echo "$COMMITS" | grep -q "^feat\|^feature"; then
               # Minor version bump for new features
               MINOR=$((MINOR + 1))
               PATCH=0
             elif echo "$COMMITS" | grep -q "^fix\|^bugfix"; then
               # Patch version bump for bug fixes
               PATCH=$((PATCH + 1))
-            elif echo "$COMMITS" | grep -q "BREAKING CHANGE\|^feat!:\|^fix!:"; then
-              # Major version bump for breaking changes
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
             else
               # Default to patch bump
               PATCH=$((PATCH + 1))
