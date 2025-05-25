@@ -117,7 +117,6 @@ def background_scan(root):
                         folders_status[dn]["total"] = total
                         folders_status[dn]["current"] = current
                         folders_status[dn]["done"] = scanned == total
-                        save_status(status)
                 return cb
             fut = executor.submit(_scan_folder, full_path, make_callback(dirname))
             folders_futures[dirname] = fut
