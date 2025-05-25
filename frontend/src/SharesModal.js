@@ -7,24 +7,6 @@ function SharesModal({ token, show, onClose }) {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("");
 
-  // Scan-Status für Fortschrittsanzeige
-  const [scanStatus, setScanStatus] = useState(null);
-
-  useEffect(() => {
-    let interval;
-    const fetchScanStatus = async () => {
-      try {
-        const res = await fetch("/api/scan_status");
-        const data = await res.json();
-        setScanStatus(data);
-      } catch {
-        setScanStatus(null);
-      }
-    };
-    fetchScanStatus();
-    interval = setInterval(fetchScanStatus, 2000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     if (!show) return;
@@ -68,34 +50,6 @@ function SharesModal({ token, show, onClose }) {
         <Modal.Title>Aktive Freigaben</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        {/* Fortschrittsanzeige für Scan */}
-        {scanStatus && scanStatus.status !== "idle" && scanStatus.done === false && (
-          <div className="mb-3">
-            {(() => {
-              const percent = scanStatus.total > 0 ? Math.round((scanStatus.scanned / scanStatus.total) * 100) : 0;
-              return (
-                <div>
-                  <b>Scan läuft:</b> {scanStatus.scanned} / {scanStatus.total} ({percent}%)
-                </div>
-              );
-            })()}
-            <div className="progress" style={{ height: 20 }}>
-              <div
-                className="progress-bar progress-bar-striped progress-bar-animated"
-                role="progressbar"
-                style={{ width: `${(scanStatus.scanned / scanStatus.total) * 100}%` }}
-                aria-valuenow={scanStatus.scanned}
-                aria-valuemin={0}
-                aria-valuemax={scanStatus.total}
-              >
-                {Math.round((scanStatus.scanned / scanStatus.total) * 100)}%
-              </div>
-            </div>
-            <div className="small text-muted mt-1" style={{ wordBreak: "break-all" }}>
-              {scanStatus.current}
-            </div>
-          </div>
-        )}
         <InputGroup className="mb-3">
           <Form.Control
             placeholder="Nach Pfad oder Token suchen…"

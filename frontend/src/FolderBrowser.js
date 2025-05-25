@@ -137,7 +137,7 @@ function FolderBrowser({ token }) {
         <div className="mb-3">
           <div>
             {(() => {
-              const percent = scanStatus.total > 0 ? Math.round((scanStatus.scanned / scanStatus.total) * 100) : 0;
+              const percent = scanStatus.total > 0 ? Math.min(100, Math.round((scanStatus.scanned / scanStatus.total) * 100)) : 0;
               return (
                 <div>
                   <b>Scan läuft:</b> {scanStatus.scanned} / {scanStatus.total} ({percent}%)
@@ -219,6 +219,11 @@ function FolderBrowser({ token }) {
               <span>
                 {entry.is_dir ? "📁" : "📄"} {entry.name}
                 {entry.is_dir && entry.has_children && <span className="text-muted ms-2">(…)</span>}
+                {entry.is_dir && scanStatus && scanStatus.folders && scanStatus.folders[entry.name] && !scanStatus.folders[entry.name].done && (
+                  <span className="text-info ms-2" style={{ fontSize: "0.95em" }}>
+                    {`{Scanning ${scanStatus.folders[entry.name].scanned} / ${scanStatus.folders[entry.name].total} : ${scanStatus.folders[entry.name].current}}`}
+                  </span>
+                )}
                 {!entry.is_dir && entry.size !== undefined && (
                   <span className="text-muted ms-2" style={{ fontSize: "0.95em" }}>
                     {formatSize(entry.size)}
