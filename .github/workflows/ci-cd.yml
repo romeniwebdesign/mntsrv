@@ -1,0 +1,173 @@
+# .github/workflows/ci-cd.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Build and push Docker image
+  build-and-push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      version: ${{ steps.version.outputs.version }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for versioning
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate version
+        id: version
+        run: |
+          # Get the latest tag, default to v0.0.0 if no tags exist
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          
+          # Remove 'v' prefix for semantic versioning
+          LATEST_VERSION=${LATEST_TAG#v}
+          echo "Latest version: $LATEST_VERSION"
+          
+          # Get commits since last tag
+          COMMIT_COUNT=$(git rev-list --count ${LATEST_TAG}..HEAD 2>/dev/null || git rev-list --count HEAD)
+          echo "Commits since last tag: $COMMIT_COUNT"
+          
+          if [ $COMMIT_COUNT -eq 0 ]; then
+            # No new commits, use existing version
+            NEW_VERSION=$LATEST_VERSION
+          else
+            # Parse version components
+            IFS='.' read -ra VERSION_PARTS <<< "$LATEST_VERSION"
+            MAJOR=${VERSION_PARTS[0]:-0}
+            MINOR=${VERSION_PARTS[1]:-0}
+            PATCH=${VERSION_PARTS[2]:-0}
+            
+            # Check commit messages for version bump type
+            COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s" 2>/dev/null || git log --pretty=format:"%s")
+            
+            if echo "$COMMITS" | grep -E -q "BREAKING CHANGE|^[a-z]+(\(.+\))?!:|^[a-z]+!:"; then
+              # Major version bump for breaking changes
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+            elif echo "$COMMITS" | grep -E -q "^feat(\(.+\))?:"; then
+              # Minor version bump for new features
+              MINOR=$((MINOR + 1))
+              PATCH=0
+            elif echo "$COMMITS" | grep -E -q "^fix(\(.+\))?:"; then
+              # Patch version bump for bug fixes
+              PATCH=$((PATCH + 1))
+            else
+              # Default to patch bump
+              PATCH=$((PATCH + 1))
+            fi
+            
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          fi
+          
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=v${{ steps.version.outputs.version }}
+            type=sha,prefix=${{ github.ref_name }}-
+          labels: |
+            org.opencontainers.image.title=${{ github.repository }}
+            org.opencontainers.image.description=Self-hosted file sharing and directory browser with Python backend and React frontend
+            org.opencontainers.image.version=v${{ steps.version.outputs.version }}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Create GitHub release
+  release:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          VERSION="${{ needs.build-and-push.outputs.version }}"
+          TAG="v$VERSION"
+          
+          # Get the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null || echo "")
+          
+          echo "Generating changelog from $PREV_TAG to $TAG"
+          
+          # Generate changelog
+          if [ -n "$PREV_TAG" ]; then
+            CHANGELOG=$(git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          fi
+          
+          # Create release notes
+          cat > release_notes.md << EOF
+          ## What's Changed
+          
+          $CHANGELOG
+          
+          ## Docker Image
+          
+          \`\`\`bash
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v$VERSION
+          \`\`\`
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...$TAG
+          EOF
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          cat release_notes.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.build-and-push.outputs.version }}
+          name: Release v${{ needs.build-and-push.outputs.version }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: false
