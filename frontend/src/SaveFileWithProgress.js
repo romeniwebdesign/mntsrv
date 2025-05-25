@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Button, ProgressBar, Row, Col, Badge, Alert } from "react-bootstrap";
 
-function SaveFileWithProgress({ url, filename = "download.dat" }) {
+function SaveFileWithProgress({ url, filename = "download.dat", label }) {
   const [progress, setProgress] = useState(0);
   const [speed, setSpeed] = useState(null);
   const [eta, setEta] = useState(null);
@@ -88,7 +88,7 @@ function SaveFileWithProgress({ url, filename = "download.dat" }) {
       <Row className="align-items-center mb-3 justify-content-center g-2">
         <Col xs="auto">
           <Button onClick={handleDownload} disabled={saving} variant="primary" size="sm">
-            {saving ? "Speichert..." : "Herunterladen & Speichern"}
+            {saving ? "Speichert..." : (label || "Herunterladen & Speichern")}
           </Button>
         </Col>
         {saving && (

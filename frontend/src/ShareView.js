@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Form, Button, Alert, ListGroup, Spinner } from "react-bootstrap";
+import { Form, Button, Alert, ListGroup, Spinner, Card, Container } from "react-bootstrap";
 import SaveFileWithProgress from "./SaveFileWithProgress";
 
 function ShareView() {
@@ -24,11 +24,20 @@ function ShareView() {
       });
       if (res.status === 401) {
         setAskPassword(true);
-        setError("Passwort erforderlich oder falsch.");
+        if (pw) {
+          setError("Falsches Passwort.");
+        } else {
+          setError(null);
+        }
         setLoading(false);
         return;
       }
-      if (!res.ok) throw new Error("Freigabe ungültig oder abgelaufen");
+      if (!res.ok) {
+        setAskPassword(false);
+        setError("Freigabe ungültig oder abgelaufen.");
+        setLoading(false);
+        return;
+      }
       const ct = res.headers.get("content-type");
       if (ct && ct.startsWith("application/json")) {
         const d = await res.json();
@@ -39,7 +48,7 @@ function ShareView() {
         window.location = `/api/share/${token}/download${pw ? "?password=" + encodeURIComponent(pw) : ""}`;
       }
     } catch (err) {
-      setError(err.message);
+      setError("Unbekannter Fehler.");
     }
     setLoading(false);
   };
@@ -57,36 +66,57 @@ function ShareView() {
   const getDownloadUrl = (pw) =>
     `/api/share/${token}/download${pw ? "?password=" + encodeURIComponent(pw) : ""}`;
 
-  if (loading) return <Spinner className="mt-5" />;
+  // Helper to format file size
+  function formatSize(bytes) {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    let val = bytes / Math.pow(k, i);
+    if (i >= 3) {
+      // GB or higher, show 1 decimal
+      return val.toFixed(1) + " " + sizes[i];
+    }
+    return val.toFixed(2) + " " + sizes[i];
+  }
+
+  if (loading) return (
+    <Container className="d-flex justify-content-center align-items-center min-vh-100">
+      <Spinner />
+    </Container>
+  );
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        minWidth: "100vw",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#f8f9fa",
-      }}
-    >
-      <div
-        style={{
-          width: "50vw",
-          height: "50vh",
-          maxWidth: 600,
-          maxHeight: "80vh",
-          background: "#fff",
-          borderRadius: 16,
-          boxShadow: "0 4px 32px rgba(0,0,0,0.10)",
-          padding: 32,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "flex-start",
-          overflow: "auto",
-        }}
-      >
-        <h2>
+    <Container className="d-flex flex-column align-items-center justify-content-center min-vh-100">
+      {/* Logo */}
+      <div className="text-center mb-4">
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: "1.5rem",
+            letterSpacing: 1,
+            color: "#1b4571",
+            marginBottom: 2,
+            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+          }}
+        >
+          MNTSRV
+        </div>
+        <div
+          style={{
+            fontSize: "1rem",
+            fontWeight: 400,
+            letterSpacing: 2,
+            color: "#9289A6",
+            lineHeight: 1.2,
+            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+          }}
+        >
+          MOUNT. BROWSE. SHARE.
+        </div>
+      </div>
+      <Card className="text-center w-100" style={{ maxWidth: 600 }}>
+        <Card.Header>
           {data
             ? data.type === "file"
               ? data.path
@@ -98,57 +128,82 @@ function ShareView() {
                 : "Ordner"
               : "Freigabe"
             : "Freigabe"}
-        </h2>
-        {error && <Alert variant="danger">{error}</Alert>}
-        {askPassword && (
-          <Form onSubmit={handlePassword} className="mb-3">
-            <Form.Group>
-              <Form.Label>Passwort</Form.Label>
-              <Form.Control
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
+        </Card.Header>
+        <Card.Body>
+          {/* Error messages */}
+          {error && <Alert variant="danger">{error}</Alert>}
+          {/* Password form */}
+          {askPassword && (
+            <Form onSubmit={handlePassword} className="mb-3">
+              <Form.Group>
+                <Form.Label>Passwort</Form.Label>
+                <Form.Control
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                />
+              </Form.Group>
+              <Button type="submit" className="mt-2">
+                Anzeigen
+              </Button>
+            </Form>
+          )}
+          {/* File share */}
+          {data && data.type === "file" && (
+            <div>
+              <SaveFileWithProgress
+                url={getDownloadUrl(password)}
+                filename={data.path ? data.path.split("/").pop() : "download"}
+                label={`Herunterladen (${formatSize(data.size)})`}
               />
-            </Form.Group>
-            <Button type="submit" className="mt-2">
-              Anzeigen
-            </Button>
-          </Form>
-        )}
-        {data && data.type === "folder" && (
-          <ListGroup>
-            {data.entries.map((entry) => (
-              <ListGroup.Item
-                key={`${entry.name}-${entry.is_dir ? "dir" : "file"}`}
-                className="d-flex justify-content-between align-items-center"
-              >
-                <span>
-                  {entry.is_dir ? "📁" : "📄"} {entry.name}
-                </span>
-                {!entry.is_dir && (
-                  <SaveFileWithProgress
-                    url={
-                      getDownloadUrl(password) +
-                      `&file=${encodeURIComponent(entry.name)}`
-                    }
-                    filename={entry.name}
-                  />
-                )}
-              </ListGroup.Item>
-            ))}
-          </ListGroup>
-        )}
-        {data && data.type !== "folder" && (
-          <div className="mt-3">
-            <SaveFileWithProgress
-              url={getDownloadUrl(password)}
-              filename={data.path ? data.path.split("/").pop() : "download"}
-            />
-          </div>
-        )}
-      </div>
-    </div>
+            </div>
+          )}
+          {/* Folder share */}
+          {data && data.type === "folder" && (
+            <ListGroup className="mb-2">
+              {data.entries.map((entry) => (
+                <ListGroup.Item
+                  key={`${entry.name}-${entry.is_dir ? "dir" : "file"}`}
+                  className="d-flex justify-content-between align-items-center"
+                >
+                  <span>
+                    {entry.is_dir ? "📁" : "📄"} {entry.name}
+                  </span>
+                  {!entry.is_dir && (
+                    <SaveFileWithProgress
+                      url={
+                        getDownloadUrl(password) +
+                        `&file=${encodeURIComponent(entry.name)}`
+                      }
+                      filename={entry.name}
+                      label={`Download (${formatSize(entry.size)})`}
+                    />
+                  )}
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          )}
+        </Card.Body>
+        <Card.Footer className="text-muted">
+          {/* Progress: SaveFileWithProgress renders its own progress bar per file.
+              If multiple downloads are started, each file shows its own progress. */}
+          {data && data.type === "file" && (
+            <span>Dateigröße: {formatSize(data.size)}</span>
+          )}
+          {data && data.type === "folder" && (
+            <span>
+              {data.entries.filter(e => !e.is_dir).length} Dateien,{" "}
+              {formatSize(
+                data.entries
+                  .filter(e => !e.is_dir)
+                  .reduce((sum, e) => sum + (e.size || 0), 0)
+              )}
+            </span>
+          )}
+        </Card.Footer>
+      </Card>
+    </Container>
   );
 }
 
