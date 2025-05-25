@@ -4,11 +4,11 @@ import FolderBrowser from "./FolderBrowser";
 import SearchBar from "./SearchBar";
 import { Navbar, Container, Nav, Button, NavDropdown } from "react-bootstrap";
 import { Routes, Route, useNavigate, useLocation, Navigate, Link } from "react-router-dom";
-import SharesModal from "./SharesModal";
+import SharesPage from "./SharesPage";
+import StatsPage from "./StatsPage";
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem("token") || "");
-  const [showShares, setShowShares] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -53,8 +53,11 @@ function App() {
             <Nav.Link as={Link} to="/browse" className="text-dark">
               Browse
             </Nav.Link>
-            <Nav.Link onClick={() => setShowShares(true)} className="text-dark">
+            <Nav.Link as={Link} to="/shares" className="text-dark">
               Shares
+            </Nav.Link>
+            <Nav.Link as={Link} to="/stats" className="text-dark">
+              Stats
             </Nav.Link>
             <Nav.Item className="d-flex align-items-center">
               <SearchBar token={token} onNavigate={handleNavigate} />
@@ -88,11 +91,18 @@ function App() {
                 />
               }
             />
+            <Route
+              path="/shares"
+              element={<SharesPage token={token} />}
+            />
+            <Route
+              path="/stats"
+              element={<StatsPage token={token} />}
+            />
             <Route path="*" element={<Navigate to="/browse" replace />} />
           </Routes>
         </div>
       </Container>
-      <SharesModal token={token} show={showShares} onClose={() => setShowShares(false)} />
     </div>
   );
 }
