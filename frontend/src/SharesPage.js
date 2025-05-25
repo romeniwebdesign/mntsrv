@@ -67,7 +67,14 @@ function SharesPage({ token }) {
         {scanStatus && scanStatus.status !== "idle" && scanStatus.done === false && (
           <div className="mb-3">
             <div>
-              <b>Scan läuft:</b> {scanStatus.scanned} / {scanStatus.total} ({Math.round((scanStatus.scanned / scanStatus.total) * 100)}%)
+              {(() => {
+                const percent = scanStatus.total > 0 ? Math.round((scanStatus.scanned / scanStatus.total) * 100) : 0;
+                return (
+                  <div>
+                    <b>Scan läuft:</b> {scanStatus.scanned} / {scanStatus.total} ({percent}%)
+                  </div>
+                );
+              })()}
             </div>
             <div className="progress" style={{ height: 20 }}>
               <div
