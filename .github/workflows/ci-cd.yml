@@ -72,7 +72,7 @@ jobs:
               # Minor version bump for new features
               MINOR=$((MINOR + 1))
               PATCH=0
-            elif echo "$COMMITS" | grep -E -q "^fix\|^bugfix"; then
+            elif echo "$COMMITS" | grep -E -q "^(fix|bugfix):"; then
               # Patch version bump for bug fixes
               PATCH=$((PATCH + 1))
             else
