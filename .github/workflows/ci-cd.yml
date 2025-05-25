@@ -63,7 +63,7 @@ jobs:
             # Check commit messages for version bump type
             COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s" 2>/dev/null || git log --pretty=format:"%s")
             
-            if echo "$COMMITS" | grep -q "BREAKING CHANGE\|^feat!:\|^fix!:"; then
+            if echo "$COMMITS" | grep -q "BREAKING CHANGE\|^[a-z]+\(\S+\)!:\|^[a-z]+!:"; then
               # Major version bump for breaking changes
               MAJOR=$((MAJOR + 1))
               MINOR=0
