@@ -1,6 +1,6 @@
 services:
   mntsrv:
-    build: .
+    image: ghcr.io/romeniwebdesign/mntsrv:v0.1.0
     container_name: mntsrv
     environment:
       - ADMIN_USER=${ADMIN_USER}

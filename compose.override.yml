@@ -1,0 +1,6 @@
+services:
+  mntsrv:
+    # Use local build context for development
+    build: .
+    # Optionally, you can override or add more dev-specific settings here
+    # image: is overridden by build:
