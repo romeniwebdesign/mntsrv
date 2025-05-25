@@ -1,0 +1,17 @@
+:root {
+  --mntsrv-white: #ffffff;
+  --mntsrv-blue: #1b4571;
+  --mntsrv-dark: #333333;
+  --mntsrv-purple: #9289A6;
+}
+
+/* Utility classes for color palette */
+.bg-mntsrv-blue { background-color: var(--mntsrv-blue) !important; }
+.bg-mntsrv-dark { background-color: var(--mntsrv-dark) !important; }
+.bg-mntsrv-purple { background-color: var(--mntsrv-purple) !important; }
+.text-mntsrv-blue { color: var(--mntsrv-blue) !important; }
+.text-mntsrv-dark { color: var(--mntsrv-dark) !important; }
+.text-mntsrv-purple { color: var(--mntsrv-purple) !important; }
+.text-mntsrv-white { color: var(--mntsrv-white) !important; }
+
+/* Custom styles for mntsrv app can be added here */

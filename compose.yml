@@ -1,0 +1,15 @@
+services:
+  mntsrv:
+    build: .
+    container_name: mntsrv
+    environment:
+      - ADMIN_USER=admin
+      - ADMIN_PASSWORD=supersecret
+      - SCAN_ROOT=/data
+      - PORT=7000
+    ports:
+      - "7000:7000"
+    volumes:
+      - ./data:/data
+      - ./backend/config:/app/backend/config
+    restart: unless-stopped
