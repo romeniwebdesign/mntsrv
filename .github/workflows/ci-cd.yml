@@ -1,3 +1,4 @@
+# .github/workflows/ci-cd.yml
 name: CI/CD Pipeline
 
 on:
@@ -63,7 +64,7 @@ jobs:
             # Check commit messages for version bump type
             COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s" 2>/dev/null || git log --pretty=format:"%s")
             
-            if echo "$COMMITS" | grep -E -q "BREAKING CHANGE\|^[a-z]+\(\S+\)!:\|^[a-z]+!:"; then
+            if echo "$COMMITS" | grep -E -q "BREAKING CHANGE|^[a-z]+(\(.+\))?!:|^[a-z]+!:"; then
               # Major version bump for breaking changes
               MAJOR=$((MAJOR + 1))
               MINOR=0
@@ -72,7 +73,7 @@ jobs:
               # Minor version bump for new features
               MINOR=$((MINOR + 1))
               PATCH=0
-            elif echo "$COMMITS" | grep -E -q "^(fix|bugfix):"; then
+            elif echo "$COMMITS" | grep -E -q "^fix(\(.+\))?:"; then
               # Patch version bump for bug fixes
               PATCH=$((PATCH + 1))
             else
@@ -132,7 +133,7 @@ jobs:
           TAG="v$VERSION"
           
           # Get the previous tag
-          PREV_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=1) 2>/dev/null || echo "")
+          PREV_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null || echo "")
           
           echo "Generating changelog from $PREV_TAG to $TAG"
           
@@ -163,12 +164,10 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ needs.build-and-push.outputs.version }}
-          release_name: Release v${{ needs.build-and-push.outputs.version }}
+          name: Release v${{ needs.build-and-push.outputs.version }}
           body: ${{ steps.changelog.outputs.changelog }}
           draft: false
           prerelease: false
