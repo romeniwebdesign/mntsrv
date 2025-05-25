@@ -132,7 +132,7 @@ jobs:
           TAG="v$VERSION"
           
           # Get the previous tag
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          PREV_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=1) 2>/dev/null || echo "")
           
           echo "Generating changelog from $PREV_TAG to $TAG"
           
