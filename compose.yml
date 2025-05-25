@@ -3,13 +3,15 @@ services:
     build: .
     container_name: mntsrv
     environment:
-      - ADMIN_USER=admin
-      - ADMIN_PASSWORD=supersecret
-      - SCAN_ROOT=/data
-      - PORT=7000
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - SCAN_ROOT=${SCAN_ROOT:-/data}
+      - PORT=${PORT}
     ports:
       - "7000:7000"
     volumes:
       - ./data:/data
       - ./backend/config:/app/backend/config
+      - ./backend/cache:/app/backend/cache
+    user: "${UID}:${GID}"
     restart: unless-stopped
