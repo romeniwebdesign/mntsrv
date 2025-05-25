@@ -98,7 +98,7 @@ jobs:
             type=sha,prefix={{branch}}-
           labels: |
             org.opencontainers.image.title=${{ github.repository }}
-            org.opencontainers.image.description=Your app description
+            org.opencontainers.image.description=Self-hosted file sharing and directory browser with Python backend and React frontend
             org.opencontainers.image.version=v${{ steps.version.outputs.version }}
 
       - name: Build and push Docker image
