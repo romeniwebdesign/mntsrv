@@ -1,3 +1,4 @@
 .env
 data
 backend/cache/*
+backend/config/search_index.json
