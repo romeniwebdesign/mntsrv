@@ -97,13 +97,10 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
 @app.post("/api/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    print("DEBUG LOGIN: ADMIN_USER =", ADMIN_USER, "ADMIN_PASSWORD =", ADMIN_PASSWORD, "username =", form_data.username, "password =", form_data.password)
     user = get_user(form_data.username)
     if not user or not verify_password(form_data.password, user):
-        print("DEBUG LOGIN: user not found or password invalid")
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     access_token = create_access_token(data={"sub": user["username"], "is_admin": user["is_admin"]})
-    print("DEBUG LOGIN: success for", user["username"])
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/api/ping")
@@ -172,11 +169,55 @@ def rescan_folder(
     start_background_scan(folder_path)
     return {"status": "scan started", "async": True, "path": folder_path}
 
+def count_from_cache(folder_path):
+    import glob
+    import json
+    import os
+
+    # Map all cache files by their "path"
+    cache_dir = os.path.join(os.path.dirname(__file__), "cache")
+    path_to_cache = {}
+    for f in glob.glob(os.path.join(cache_dir, "*.json")):
+        try:
+            with open(f) as fh:
+                data = json.load(fh)
+                path_to_cache[data.get("path")] = f
+        except Exception:
+            continue
+
+    def recurse(path):
+        cache_file = path_to_cache.get(path)
+        if not cache_file:
+            return (0, 0)
+        try:
+            with open(cache_file) as fh:
+                data = json.load(fh)
+            folders = 1  # count this folder
+            files = 0
+            for entry in data.get("entries", []):
+                if entry.get("is_dir"):
+                    subfolders, subfiles = recurse(os.path.join(path, entry["name"]))
+                    folders += subfolders
+                    files += subfiles
+                else:
+                    files += 1
+            return (folders, files)
+        except Exception:
+            return (0, 0)
+
+    return recurse(folder_path)
+
 @app.get("/api/scan_status")
 def scan_status():
     status = load_status()
     if not status:
-        return {"status": "idle"}
+        status = {"status": "idle"}
+    # Use cache for stats
+    num_folders, num_files = count_from_cache(SCAN_ROOT)
+    total = num_folders + num_files
+    status["num_folders"] = num_folders
+    status["num_files"] = num_files
+    status["total"] = total
     return status
 
 import secrets
