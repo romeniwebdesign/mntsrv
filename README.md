@@ -40,9 +40,10 @@ mntsrv consists of a Python backend and a React frontend. The backend handles di
      ```
 
 2. **Configure environment**  
-   - Copy `backend/.env.example` to `.env` and adjust settings as needed.
+   - Copy `backend/.env.example` to `backend/.env` and adjust settings as needed.
+   - (Recommended) Add a root `.env.example` and `frontend/.env.example` for full-stack configuration and onboarding. These are not present yet.
 
-3. **Run the application**  
+3. **Run the application (local development)**  
    - Start the backend server:  
      ```
      python main.py
@@ -54,6 +55,22 @@ mntsrv consists of a Python backend and a React frontend. The backend handles di
 
 4. **Access the app**  
    - Open your browser and go to `http://localhost:3000`
+
+## Docker Setup
+
+Alternatively, you can use Docker Compose to run the full stack:
+
+```
+docker compose up --build
+```
+
+This will build and start both the backend and frontend services as defined in `compose.yml`.  
+Ensure you have configured the necessary environment files before starting the containers.
+
+## Project Documentation
+
+This project uses a [Memory Bank](./memory-bank/) for all core documentation, including project goals, architecture, technical context, and progress tracking.  
+Refer to the files in `memory-bank/` for up-to-date information on the project's design and status.
 
 ## License
 
