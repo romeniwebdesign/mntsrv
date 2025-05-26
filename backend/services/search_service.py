@@ -2,7 +2,7 @@ import os
 import json
 from typing import List, Dict, Any
 
-from dirscan import scan_or_cache
+from backend.services.dirscan_service import scan_or_cache
 
 def search_files(root: str, query: str, max_results: int = 100) -> List[Dict[str, Any]]:
     """

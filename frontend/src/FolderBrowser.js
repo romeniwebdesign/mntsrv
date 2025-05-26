@@ -8,7 +8,7 @@ const PAGE_SIZE = 200;
 function FolderBrowser({ token }) {
   const params = useParams();
   const navigate = useNavigate();
-  const scanRoot = window.SCAN_ROOT || "/data";
+  const scanRoot = window.SCAN_ROOT || "/";
   const relPath = params["*"] || "";
   const absPath = relPath ? scanRoot + "/" + relPath : scanRoot;
 
@@ -132,36 +132,6 @@ function FolderBrowser({ token }) {
 
   return (
     <div>
-      {/* Fortschrittsanzeige für Scan */}
-      {scanStatus && scanStatus.status !== "idle" && scanStatus.done === false && (
-        <div className="mb-3">
-          <div>
-            {(() => {
-              const percent = scanStatus.total > 0 ? Math.min(100, Math.round((scanStatus.scanned / scanStatus.total) * 100)) : 0;
-              return (
-                <div>
-                  <b>Scan läuft:</b> {scanStatus.scanned} / {scanStatus.total} ({percent}%)
-                </div>
-              );
-            })()}
-          </div>
-          <div className="progress" style={{ height: 20 }}>
-            <div
-              className="progress-bar progress-bar-striped progress-bar-animated"
-              role="progressbar"
-              style={{ width: `${(scanStatus.scanned / scanStatus.total) * 100}%` }}
-              aria-valuenow={scanStatus.scanned}
-              aria-valuemin={0}
-              aria-valuemax={scanStatus.total}
-            >
-              {Math.round((scanStatus.scanned / scanStatus.total) * 100)}%
-            </div>
-          </div>
-          <div className="small text-muted mt-1" style={{ wordBreak: "break-all" }}>
-            {scanStatus.current}
-          </div>
-        </div>
-      )}
       <div className="d-flex align-items-center mb-2">
         <Breadcrumb className="mb-0" aria-label="breadcrumb">
           {breadcrumbs.map((bc, idx) => {
@@ -214,63 +184,93 @@ function FolderBrowser({ token }) {
               key={`${entry.name}-${entry.is_dir ? "dir" : "file"}`}
               action={entry.is_dir}
               onClick={() => entry.is_dir && handleOpenFolder(entry)}
-              className="d-flex justify-content-between align-items-center"
+              style={{ padding: "0.5rem 1rem" }}
             >
-              <span>
-                {entry.is_dir ? "📁" : "📄"} {entry.name}
-                {entry.is_dir && entry.has_children && <span className="text-muted ms-2">(…)</span>}
-                {entry.is_dir && scanStatus && scanStatus.folders && scanStatus.folders[entry.name] && !scanStatus.folders[entry.name].done && (
-                  <span className="text-info ms-2" style={{ fontSize: "0.95em" }}>
-                    {`{Scanning ${scanStatus.folders[entry.name].scanned} / ${scanStatus.folders[entry.name].total} : ${scanStatus.folders[entry.name].current}}`}
+              <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span>
+                    {entry.is_dir ? "📁" : "📄"} {entry.name}
+                    {entry.is_dir && entry.has_children && <span className="text-muted ms-2">(…)</span>}
+                    {entry.is_dir && scanStatus && scanStatus.folders && scanStatus.folders[entry.name] && !scanStatus.folders[entry.name].done && (
+                      <span className="text-info ms-2" style={{ fontSize: "0.95em" }}>
+                        {`{Scanning ${scanStatus.folders[entry.name].scanned} / ${scanStatus.folders[entry.name].total} : ${scanStatus.folders[entry.name].current}}`}
+                      </span>
+                    )}
+                    {!entry.is_dir && entry.size !== undefined && (
+                      <span className="text-muted ms-2" style={{ fontSize: "0.95em" }}>
+                        {formatSize(entry.size)}
+                      </span>
+                    )}
                   </span>
-                )}
-                {!entry.is_dir && entry.size !== undefined && (
-                  <span className="text-muted ms-2" style={{ fontSize: "0.95em" }}>
-                    {formatSize(entry.size)}
-                  </span>
-                )}
-              </span>
-              <span>
-                {entry.is_dir && (
+                  {/* Progress bar: full width, below the folder name */}
+                  {entry.is_dir && scanStatus && scanStatus.folders && scanStatus.folders[entry.name] && !scanStatus.folders[entry.name].done && (
+                    <div style={{ width: "100%", marginTop: 2 }}>
+                      <div
+                        style={{
+                          height: 4,
+                          background: "#e9ecef",
+                          borderRadius: 2,
+                          width: "100%",
+                          position: "relative"
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: "100%",
+                            background: "#17a2b8",
+                            borderRadius: 2,
+                            width: `${scanStatus.folders[entry.name].total > 0
+                              ? Math.min(100, Math.round((scanStatus.folders[entry.name].scanned / scanStatus.folders[entry.name].total) * 100))
+                              : 0}%`,
+                            transition: "width 0.3s"
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", marginLeft: 12 }}>
+                  {entry.is_dir && (
+                    <Button
+                      size="sm"
+                      variant="outline-info"
+                      className="me-2"
+                      onClick={async e => {
+                        e.stopPropagation();
+                        try {
+                          await fetch(`/api/scan?path=${encodeURIComponent(path ? path + "/" + entry.name : entry.name)}`, {
+                            method: "POST",
+                            headers: { Authorization: `Bearer ${token}` },
+                          });
+                          // Optional: Feedback, z.B. Toast oder Alert
+                        } catch {}
+                      }}
+                    >
+                      Rescan
+                    </Button>
+                  )}
+                  {!entry.is_dir && (
+                    <a
+                      href={`/share/${btoa(encodeURIComponent((path ? path + "/" : "") + entry.name))}`}
+                      className="btn btn-sm btn-outline-primary me-2"
+                      download={entry.name}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      Download
+                    </a>
+                  )}
                   <Button
                     size="sm"
-                    variant="outline-info"
-                    className="me-2"
-                    onClick={async e => {
+                    variant="outline-success"
+                    onClick={e => {
                       e.stopPropagation();
-                      try {
-                        await fetch(`/api/scan?path=${encodeURIComponent(path ? path + "/" + entry.name : entry.name)}`, {
-                          method: "POST",
-                          headers: { Authorization: `Bearer ${token}` },
-                        });
-                        // Optional: Feedback, z.B. Toast oder Alert
-                      } catch {}
+                      setSharePath(path ? `${path}/${entry.name}` : entry.name);
                     }}
                   >
-                    Rescan
+                    Freigeben
                   </Button>
-                )}
-                {!entry.is_dir && (
-                  <a
-                    href={`/share/${btoa(encodeURIComponent((path ? path + "/" : "") + entry.name))}`}
-                    className="btn btn-sm btn-outline-primary me-2"
-                    download={entry.name}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    Download
-                  </a>
-                )}
-                <Button
-                  size="sm"
-                  variant="outline-success"
-                  onClick={e => {
-                    e.stopPropagation();
-                    setSharePath(path ? `${path}/${entry.name}` : entry.name);
-                  }}
-                >
-                  Freigeben
-                </Button>
-              </span>
+                </div>
+              </div>
             </ListGroup.Item>
           ));
         })()}

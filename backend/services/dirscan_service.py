@@ -15,12 +15,17 @@ def get_cache_path(folder_path: str, mtime: float) -> str:
     h = hashlib.sha256(key.encode("utf-8")).hexdigest()
     return os.path.join(CACHE_DIR, f"{h}.json")
 
+from backend.utils.path_utils import SCAN_ROOT
+
 def scan_folder(folder_path: str) -> Dict[str, Any]:
     """
     Scannt ein Verzeichnis und gibt Dict mit Ordnern/Dateien zurück.
     """
     ensure_cache_dir()
     try:
+        rel_path = os.path.relpath(folder_path, SCAN_ROOT)
+        if rel_path == ".":
+            rel_path = ""
         entries = []
         with os.scandir(folder_path) as it:
             for entry in it:
@@ -37,8 +42,8 @@ def scan_folder(folder_path: str) -> Dict[str, Any]:
         mtime = os.stat(folder_path).st_mtime
         cache_path = get_cache_path(folder_path, mtime)
         with open(cache_path, "w") as f:
-            json.dump({"path": folder_path, "mtime": mtime, "entries": entries}, f)
-        return {"path": folder_path, "mtime": mtime, "entries": entries, "cache": cache_path}
+            json.dump({"path": rel_path, "mtime": mtime, "entries": entries}, f)
+        return {"path": rel_path, "mtime": mtime, "entries": entries, "cache": cache_path}
     except Exception as e:
         return {"error": str(e)}
 

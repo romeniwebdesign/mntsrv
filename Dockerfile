@@ -40,6 +40,7 @@ RUN chown -R appuser:appgroup /app
 # Expose port (default 8000, can be overridden)
 ENV PORT=8000
 ENV SCAN_ROOT=/data
+ENV PYTHONPATH=/app
 
 # Use non-root user
 USER appuser
