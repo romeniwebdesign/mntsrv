@@ -196,8 +196,11 @@ def count_from_cache(folder_path):
 
 from backend.services.scan_service import get_scan_status
 
+from fastapi import Depends
+from backend.services.auth_service import get_current_user
+
 @app.get("/api/scan_status")
-def scan_status():
+def scan_status(user=Depends(get_current_user)):
     return get_scan_status(SCAN_ROOT)
 
 
