@@ -1,12 +1,18 @@
 import React, { useState, useRef } from "react";
-import { Button, ProgressBar, Row, Col, Badge, Alert } from "react-bootstrap";
+import { Button, Badge, Alert } from "react-bootstrap";
 
-function SaveFileWithProgress({ url, filename = "download.dat", label }) {
+function SaveFileWithProgress({
+  url,
+  filename = "download.dat",
+  className = "",
+  ...props
+}) {
   const [progress, setProgress] = useState(0);
   const [speed, setSpeed] = useState(null);
   const [eta, setEta] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [downloaded, setDownloaded] = useState(false);
 
   const abortRef = useRef(false);
   const readerRef = useRef(null);
@@ -18,6 +24,7 @@ function SaveFileWithProgress({ url, filename = "download.dat", label }) {
     setSpeed(null);
     setEta(null);
     setError(null);
+    setDownloaded(false);
     abortRef.current = false;
     const startTime = Date.now();
 
@@ -58,6 +65,7 @@ function SaveFileWithProgress({ url, filename = "download.dat", label }) {
       }
 
       try { await writable.close(); } catch {}
+      setDownloaded(true);
     } catch (err) {
       if (err.name !== "AbortError") {
         setError(err.message);
@@ -84,41 +92,92 @@ function SaveFileWithProgress({ url, filename = "download.dat", label }) {
   };
 
   return (
-    <div style={{ maxWidth: 600, width: "100%", margin: "0 auto" }} className="shadow-sm p-3 border rounded">
-      <Row className="align-items-center mb-3 justify-content-center g-2">
-        <Col xs="auto">
-          <Button onClick={handleDownload} disabled={saving} variant="primary" size="sm">
-            {saving ? "Speichert..." : (label || "Herunterladen & Speichern")}
-          </Button>
-        </Col>
-        {saving && (
-          <Col xs="auto">
-            <Button variant="outline-danger" size="sm" onClick={handleAbort}>
-              Abbrechen
+    <div style={{ width: "100%" }} className={className} {...props}>
+      <div style={{ display: "flex", alignItems: "center", width: "100%", gap: 8 }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          minWidth: 0,
+          flexGrow: 1,
+          justifyContent: "flex-start"
+        }}>
+          <span style={{ fontSize: 20, marginRight: 6 }}>📄</span>
+          <span style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            fontWeight: 500,
+            fontSize: 16,
+            minWidth: 0,
+            flex: 1,
+            textAlign: "left"
+          }}>
+            {filename}
+          </span>
+        </div>
+        {downloaded ? (
+          <span style={{ fontSize: 22, color: "#28a745", marginLeft: 8 }} title="Heruntergeladen">✅</span>
+        ) : (
+          <>
+            <Button
+              type="button"
+              size="sm"
+              variant={saving ? "primary" : "success"}
+              disabled={saving}
+              onClick={handleDownload}
+              style={{ minWidth: 100 }}
+            >
+              {saving ? "Speichert..." : "Download"}
             </Button>
-          </Col>
+            {saving && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline-danger"
+                onClick={handleAbort}
+                style={{ marginLeft: 6 }}
+              >
+                Abbrechen
+              </Button>
+            )}
+          </>
         )}
-      </Row>
-
+      </div>
       {saving && (
-        <>
-          <ProgressBar now={progress} label={`${progress}%`} animated striped className="mb-2" style={{ minHeight: 20 }} />
-          <div className="d-flex justify-content-between small text-muted">
-            <span><Badge bg="secondary">Speed: {speed} MB/s</Badge></span>
-            <span><Badge bg="info">ETA: {eta}s</Badge></span>
-          </div>
-        </>
-      )}
-
-      {error && (
-        <Alert variant="danger" className="mt-3 small">
-          Fehler: {error}
-          {error === "Abgebrochen" && (
-            <div className="mt-1">
-              <small>Die unvollständige Datei muss ggf. manuell gelöscht werden.</small>
+        <div style={{ marginTop: 8 }}>
+          <div className="mb-2 progress" style={{ minHeight: 20 }}>
+            <div
+              role="progressbar"
+              className="progress-bar progress-bar-animated progress-bar-striped"
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              style={{ width: `${progress}%` }}
+            >
+              {progress}%
             </div>
-          )}
-        </Alert>
+          </div>
+          <div className="d-flex justify-content-between small text-muted">
+            <span>
+              <Badge bg="secondary">Speed: {speed || ""} MB/s</Badge>
+            </span>
+            <span>
+              <Badge bg="info">ETA: {eta || ""} s</Badge>
+            </span>
+          </div>
+        </div>
+      )}
+      {error && (
+        <div className="mt-2">
+          <Alert variant="danger" className="small mb-0">
+            Fehler: {error}
+            {error === "Abgebrochen" && (
+              <div className="mt-1">
+                <small>Die unvollständige Datei muss ggf. manuell gelöscht werden.</small>
+              </div>
+            )}
+          </Alert>
+        </div>
       )}
     </div>
   );
