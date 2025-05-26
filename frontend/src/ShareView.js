@@ -164,31 +164,33 @@ function ShareView() {
           {/* Folder share */}
           {data && data.type === "folder" && (
             <ListGroup className="mb-2">
-              {data.entries.map((entry) => (
-                <ListGroup.Item
-                  key={`${entry.name}-${entry.is_dir ? "dir" : "file"}`}
-                  style={{
-                    border: "none",
-                    borderBottom: "1px solid #eee",
-                    padding: "0.5rem 1rem",
-                    display: "block"
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
-                    {entry.is_dir ? (
-                      <span style={{ flex: 1 }}>
-                        📁 {entry.name}
-                      </span>
-                    ) : (
-                      <SaveFileWithProgress
-                        url={getDownloadUrl(entry.name, password)}
-                        filename={entry.name}
-                        className="p-0 m-0 border-0 shadow-none rounded-0"
-                      />
-                    )}
-                  </div>
-                </ListGroup.Item>
-              ))}
+              {[...data.entries]
+                .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+                .map((entry) => (
+                  <ListGroup.Item
+                    key={`${entry.name}-${entry.is_dir ? "dir" : "file"}`}
+                    style={{
+                      border: "none",
+                      borderBottom: "1px solid #eee",
+                      padding: "0.5rem 1rem",
+                      display: "block"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+                      {entry.is_dir ? (
+                        <span style={{ flex: 1 }}>
+                          📁 {entry.name}
+                        </span>
+                      ) : (
+                        <SaveFileWithProgress
+                          url={getDownloadUrl(entry.name, password)}
+                          filename={entry.name}
+                          className="p-0 m-0 border-0 shadow-none rounded-0"
+                        />
+                      )}
+                    </div>
+                  </ListGroup.Item>
+                ))}
             </ListGroup>
           )}
         </Card.Body>
