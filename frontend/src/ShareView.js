@@ -67,7 +67,7 @@ function ShareView() {
         window.location = `/api/share/${token}/download${pw ? "?password=" + encodeURIComponent(pw) : ""}`;
       }
     } catch (err) {
-      setError("Unknown error.");
+      setError("Unbekannter Fehler.");
     }
     setLoading(false);
   };
