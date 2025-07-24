@@ -296,7 +296,9 @@ def rename_file(
         
         return {"status": "renamed", "old_path": old_path, "new_path": new_rel_path, "new_name": new_name}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to rename: {str(e)}")
+        import logging
+        logging.error(f"Failed to rename file: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred while renaming the file.")
 
 # StaticFiles für Frontend (nur auf /static mounten)
 if os.path.exists(frontend_build_path):
