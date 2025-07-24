@@ -11,7 +11,9 @@ def load_users():
     try:
         with open(USERS_FILE) as f:
             return json.load(f)
-    except Exception:
+    except FileNotFoundError:
+        return []
+    except json.JSONDecodeError:
         return []
 
 def save_users(users):
