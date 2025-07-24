@@ -25,6 +25,7 @@
   - Completely redesigned `ShareView.js` with folder navigation, breadcrumbs, and bulk downloads
   - Added conditional navigation and routes based on user roles
   - Implemented global `authFetch` wrapper for automatic session handling
+  - **Code Quality Improvement:** Refactored `FolderBrowser.js` to eliminate duplicated path construction logic by extracting a `constructPath()` helper function
 
 - **Configuration:**
   - Populated `users.json` with sample users for different roles

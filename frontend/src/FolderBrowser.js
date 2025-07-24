@@ -5,6 +5,11 @@ import { useParams, useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 200;
 
+// Helper function to construct file/folder paths
+const constructPath = (basePath, itemName) => {
+  return basePath ? `${basePath}/${itemName}` : itemName;
+};
+
 function FolderBrowser({ token, user, authFetch }) {
   const params = useParams();
   const navigate = useNavigate();
@@ -57,7 +62,7 @@ function FolderBrowser({ token, user, authFetch }) {
 
   const handleOpenFolder = (entry) => {
     if (entry.is_dir) {
-      let rel = relPath ? relPath + "/" + entry.name : entry.name;
+      let rel = constructPath(relPath, entry.name);
       navigate("/browse" + (rel ? "/" + rel : ""));
     }
   };
@@ -80,7 +85,7 @@ function FolderBrowser({ token, user, authFetch }) {
     }
 
     try {
-      const itemPath = path ? `${path}/${entry.name}` : entry.name;
+      const itemPath = constructPath(path, entry.name);
       const response = await authFetch(`/api/file?path=${encodeURIComponent(itemPath)}`, {
         method: "DELETE"
       });
@@ -109,7 +114,7 @@ function FolderBrowser({ token, user, authFetch }) {
     }
 
     try {
-      const itemPath = path ? `${path}/${renamingItem.name}` : renamingItem.name;
+      const itemPath = constructPath(path, renamingItem.name);
       const response = await authFetch(`/api/file/rename?old_path=${encodeURIComponent(itemPath)}&new_name=${encodeURIComponent(newName)}`, {
         method: "PUT"
       });
@@ -343,7 +348,7 @@ function FolderBrowser({ token, user, authFetch }) {
                           onClick={async e => {
                             e.stopPropagation();
                             try {
-                              await authFetch(`/api/scan?path=${encodeURIComponent(path ? path + "/" + entry.name : entry.name)}`, {
+                              await authFetch(`/api/scan?path=${encodeURIComponent(constructPath(path, entry.name))}`, {
                                 method: "POST",
                               });
                             } catch {}
@@ -354,7 +359,7 @@ function FolderBrowser({ token, user, authFetch }) {
                       )}
                       {!entry.is_dir && (
                         <a
-                          href={`/share/${btoa(encodeURIComponent((path ? path + "/" : "") + entry.name))}`}
+                          href={`/share/${btoa(encodeURIComponent(constructPath(path, entry.name)))}`}
                           className="btn btn-sm btn-outline-primary me-2"
                           download={entry.name}
                           onClick={e => e.stopPropagation()}
@@ -369,7 +374,7 @@ function FolderBrowser({ token, user, authFetch }) {
                           className="me-2"
                           onClick={e => {
                             e.stopPropagation();
-                            setSharePath(path ? `${path}/${entry.name}` : entry.name);
+                            setSharePath(constructPath(path, entry.name));
                           }}
                         >
                           Share
