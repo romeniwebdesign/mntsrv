@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timezone
 from fastapi import HTTPException
 from backend.services.auth_service import pwd_context
+from backend.utils.datetime_utils import format_utc_timestamp
 
 USERS_FILE = os.path.join(os.path.dirname(__file__), "..", "config", "users.json")
 
@@ -55,7 +56,7 @@ def create_user_service(username, password, role="standard"):
         "username": username,
         "password_hash": password_hash,
         "role": role,
-        "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        "created_at": format_utc_timestamp()
     }
     
     users.append(new_user)

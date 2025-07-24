@@ -107,6 +107,10 @@ function ShareView() {
     fetchShare(password, targetPath);
   };
 
+  const handleFolderZipDownload = (folderPath = currentPath) => {
+    window.open(getFolderDownloadUrl(folderPath), '_blank');
+  };
+
   // Create breadcrumb navigation
   const getBreadcrumbs = () => {
     const segments = currentPath ? currentPath.split("/").filter(Boolean) : [];
@@ -251,7 +255,7 @@ function ShareView() {
                 <Button
                   variant="outline-primary"
                   size="sm"
-                  onClick={() => window.open(getFolderDownloadUrl(), '_blank')}
+                  onClick={() => handleFolderZipDownload()}
                 >
                   📦 Download {currentPath ? 'Folder' : 'All'} as ZIP
                 </Button>
@@ -289,7 +293,7 @@ function ShareView() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   const folderPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
-                                  window.open(getFolderDownloadUrl(folderPath), '_blank');
+                                  handleFolderZipDownload(folderPath);
                                 }}
                               >
                                 📦 ZIP

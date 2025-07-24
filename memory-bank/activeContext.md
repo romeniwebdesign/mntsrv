@@ -26,6 +26,7 @@
   - Added conditional navigation and routes based on user roles
   - Implemented global `authFetch` wrapper for automatic session handling
   - **Code Quality Improvement:** Refactored `FolderBrowser.js` to eliminate duplicated path construction logic by extracting a `constructPath()` helper function
+  - **Code Quality Improvement:** Refactored `ShareView.js` to eliminate duplicated ZIP download logic by extracting a `handleFolderZipDownload()` helper function
 
 - **Configuration:**
   - Populated `users.json` with sample users for different roles

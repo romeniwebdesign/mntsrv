@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from backend.services.auth_service import pwd_context
 from backend.utils.path_utils import SCAN_ROOT, is_safe_path
 from backend.services.dirscan_service import scan_or_cache
+from backend.utils.datetime_utils import format_utc_timestamp
 import os
 
 SHARE_FILE = os.path.join(os.path.dirname(__file__), "..", "config", "share.json")
@@ -63,7 +64,7 @@ def create_share_service(path, password, expires_in, user):
         "password_hash": password_hash,
         "password_plain": password if password else None,
         "created_by": user.get("username"),
-        "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "created_at": format_utc_timestamp(),
     }
     shares = load_shares()
     shares.append(share)
