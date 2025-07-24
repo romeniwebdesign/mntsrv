@@ -204,49 +204,81 @@ function ShareView() {
 
   // Full-width layout for file/folder content
   return (
-    <Container fluid className="py-3">
+    <Container fluid className="py-2 py-md-3">
       {/* Header with logo and share info */}
-      <div className="d-flex align-items-center justify-content-between mb-3 px-3">
-        <div className="d-flex align-items-center">
-          <div className="me-3">
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: "1.2rem",
-                letterSpacing: 1,
-                color: "#1b4571",
-                fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-              }}
-            >
-              MNTSRV
+      <div className="mb-3 px-2 px-md-3">
+        {/* Mobile: Stack vertically, Desktop: Side by side */}
+        <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center">
+          <div className="d-flex align-items-center mb-2 mb-md-0">
+            <div className="me-3">
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: "1rem",
+                  letterSpacing: 1,
+                  color: "#1b4571",
+                  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                }}
+                className="d-none d-md-block"
+              >
+                MNTSRV
+              </div>
+              <div
+                style={{
+                  fontSize: "0.9rem",
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  color: "#1b4571",
+                  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                }}
+                className="d-md-none"
+              >
+                MNTSRV
+              </div>
+              <div
+                style={{
+                  fontSize: "0.65rem",
+                  fontWeight: 400,
+                  letterSpacing: 1,
+                  color: "#9289A6",
+                  lineHeight: 1,
+                  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+                }}
+              >
+                SHARE
+              </div>
             </div>
-            <div
-              style={{
-                fontSize: "0.75rem",
-                fontWeight: 400,
-                letterSpacing: 1,
-                color: "#9289A6",
-                lineHeight: 1,
-                fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-              }}
-            >
-              SHARE
+            <div>
+              <h5 className="mb-0 text-mntsrv-dark d-md-none" style={{ fontSize: "1rem" }}>
+                {data
+                  ? data.type === "file"
+                    ? data.path
+                      ? data.path.split("/").pop()
+                      : "Datei"
+                    : data.type === "folder"
+                    ? data.path
+                      ? data.path.split("/").filter(Boolean).pop() || "Root"
+                      : "Ordner"
+                    : "Freigabe"
+                  : "Freigabe"}
+              </h5>
+              <h4 className="mb-0 text-mntsrv-dark d-none d-md-block">
+                {data
+                  ? data.type === "file"
+                    ? data.path
+                      ? data.path.split("/").pop()
+                      : "Datei"
+                    : data.type === "folder"
+                    ? data.path
+                      ? data.path.split("/").filter(Boolean).pop() || "Root"
+                      : "Ordner"
+                    : "Freigabe"
+                  : "Freigabe"}
+              </h4>
             </div>
           </div>
-          <div>
-            <h4 className="mb-0 text-mntsrv-dark">
-              {data
-                ? data.type === "file"
-                  ? data.path
-                    ? data.path.split("/").pop()
-                    : "Datei"
-                  : data.type === "folder"
-                  ? data.path
-                    ? data.path.split("/").filter(Boolean).pop() || "Root"
-                    : "Ordner"
-                  : "Freigabe"
-                : "Freigabe"}
-            </h4>
+          {/* File/folder info */}
+          <div className="ms-md-auto">
             {data && data.type === "folder" && (
               <small className="text-muted">
                 {data.entries.filter(e => !e.is_dir).length} Dateien,{" "}
@@ -268,18 +300,19 @@ function ShareView() {
 
       {/* Error messages */}
       {error && (
-        <div className="px-3 mb-3">
+        <div className="px-2 px-md-3 mb-3">
           <Alert variant="danger">{error}</Alert>
         </div>
       )}
 
       {/* File share */}
       {data && data.type === "file" && (
-        <div className="px-3">
+        <div className="px-2 px-md-3">
           <Card>
-            <Card.Body className="text-center">
+            <Card.Body className="text-center p-3 p-md-4">
               <div className="mb-3">
-                <h5>📄 {data.path ? data.path.split("/").pop() : "Datei"}</h5>
+                <h6 className="d-md-none">📄 {data.path ? data.path.split("/").pop() : "Datei"}</h6>
+                <h5 className="d-none d-md-block">📄 {data.path ? data.path.split("/").pop() : "Datei"}</h5>
                 <p className="text-muted mb-3">Dateigröße: {formatSize(data.size)}</p>
               </div>
               <SaveFileWithProgress
@@ -295,8 +328,8 @@ function ShareView() {
       {data && data.type === "folder" && (
         <div>
           {/* Breadcrumb navigation */}
-          <div className="px-3 mb-3">
-            <Breadcrumb className="mb-0">
+          <div className="px-2 px-md-3 mb-3">
+            <Breadcrumb className="mb-0" style={{ fontSize: "0.9rem" }}>
               {getBreadcrumbs().map((crumb, index) => {
                 const isLast = index === getBreadcrumbs().length - 1;
                 return (
@@ -304,7 +337,11 @@ function ShareView() {
                     key={index}
                     active={isLast}
                     onClick={!isLast ? () => handleBreadcrumbClick(crumb.path) : undefined}
-                    style={{ cursor: !isLast ? "pointer" : "default" }}
+                    style={{ 
+                      cursor: !isLast ? "pointer" : "default",
+                      fontSize: "0.85rem"
+                    }}
+                    className="text-truncate"
                   >
                     {crumb.name}
                   </Breadcrumb.Item>
@@ -314,18 +351,19 @@ function ShareView() {
           </div>
 
           {/* Bulk download buttons */}
-          <div className="px-3 mb-3">
+          <div className="px-2 px-md-3 mb-3">
             <Button
               variant="outline-primary"
               size="sm"
               onClick={() => handleFolderZipDownload()}
+              className="w-100 w-md-auto"
             >
               📦 Download {currentPath ? 'Folder' : 'All'} as ZIP
             </Button>
           </div>
 
           {/* File/folder listing */}
-          <div className="px-3">
+          <div className="px-2 px-md-3">
             <ListGroup>
               {[...data.entries]
                 .sort((a, b) => {
@@ -339,9 +377,49 @@ function ShareView() {
                     key={`${entry.name}-${entry.is_dir ? "dir" : "file"}`}
                     action={entry.is_dir}
                     onClick={entry.is_dir ? () => handleFolderClick(entry.name) : undefined}
-                    style={{ padding: "0.75rem 1rem" }}
+                    className="p-2 p-md-3"
                   >
-                    <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+                    {/* Mobile layout: Stack vertically */}
+                    <div className="d-flex flex-column d-md-none">
+                      <div className="d-flex align-items-center mb-2">
+                        <span style={{ wordBreak: "break-word", fontSize: "0.9rem" }}>
+                          {entry.is_dir ? "📁" : "📄"} {entry.name}
+                        </span>
+                      </div>
+                      <div className="d-flex align-items-center justify-content-between">
+                        {!entry.is_dir && entry.size !== undefined && (
+                          <span className="text-muted" style={{ fontSize: "0.8rem" }}>
+                            {formatSize(entry.size)}
+                          </span>
+                        )}
+                        <div className="ms-auto">
+                          {entry.is_dir ? (
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const folderPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+                                handleFolderZipDownload(folderPath);
+                              }}
+                              style={{ fontSize: "0.8rem" }}
+                            >
+                              📦 ZIP
+                            </Button>
+                          ) : (
+                            <SaveFileWithProgress
+                              url={getDownloadUrl(entry.name, password)}
+                              filename={entry.name}
+                              className="btn btn-sm btn-outline-success"
+                              style={{ minWidth: "70px", fontSize: "0.8rem" }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Desktop layout: Single row */}
+                    <div className="d-none d-md-flex align-items-center">
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="d-flex align-items-center">
                           <span style={{ wordBreak: "break-word" }}>
