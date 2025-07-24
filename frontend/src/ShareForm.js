@@ -3,7 +3,8 @@ import { Form, Button, Alert, InputGroup, Modal } from "react-bootstrap";
 
 function ShareForm({ token, path, onClose }) {
   const [password, setPassword] = useState("");
-  const [expiresIn, setExpiresIn] = useState(60); // Minuten
+  const [expiresIn, setExpiresIn] = useState(60); // Value in the selected unit
+  const [timeUnit, setTimeUnit] = useState("minutes"); // minutes, hours, days
   const [shareUrl, setShareUrl] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,16 @@ function ShareForm({ token, path, onClose }) {
       const params = new URLSearchParams();
       params.append("path", path);
       if (password) params.append("password", password);
-      params.append("expires_in", expiresIn * 60);
+      
+      // Convert to minutes based on selected unit
+      let expiresInMinutes = expiresIn;
+      if (timeUnit === "hours") {
+        expiresInMinutes = expiresIn * 60;
+      } else if (timeUnit === "days") {
+        expiresInMinutes = expiresIn * 60 * 24;
+      }
+      
+      params.append("expires_in", expiresInMinutes * 60); // Backend expects seconds
       const res = await fetch(`/api/share?${params.toString()}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -63,7 +73,7 @@ function ShareForm({ token, path, onClose }) {
             </div>
           </Form.Group>
           <Form.Group className="mb-3">
-            <Form.Label>Ablaufzeit (Minuten)</Form.Label>
+            <Form.Label>Ablaufzeit</Form.Label>
             <InputGroup>
               <Form.Control
                 type="number"
@@ -71,7 +81,15 @@ function ShareForm({ token, path, onClose }) {
                 value={expiresIn}
                 onChange={(e) => setExpiresIn(Number(e.target.value))}
               />
-              <InputGroup.Text>min</InputGroup.Text>
+              <Form.Select
+                value={timeUnit}
+                onChange={(e) => setTimeUnit(e.target.value)}
+                style={{ maxWidth: "120px" }}
+              >
+                <option value="minutes">Minuten</option>
+                <option value="hours">Stunden</option>
+                <option value="days">Tage</option>
+              </Form.Select>
             </InputGroup>
           </Form.Group>
           {error && <Alert variant="danger">{error}</Alert>}
