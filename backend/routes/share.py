@@ -6,7 +6,7 @@ from backend.services.share_service import (
     access_share_service,
     download_share_service,
 )
-from backend.services.auth_service import get_current_user
+from backend.services.auth_service import get_current_user, require_permission
 
 router = APIRouter()
 
@@ -19,7 +19,7 @@ def create_share(
     path: str = Query(...),
     password: str = Query(default=None),
     expires_in: int = Query(default=3600),
-    user=Depends(get_current_user)
+    user=Depends(require_permission("share"))
 ):
     return create_share_service(path, password, expires_in, user)
 
@@ -39,3 +39,22 @@ def download_share(
     request: Request = None,
 ):
     return download_share_service(token, password, file, request)
+
+@router.post("/api/share/{token}/browse")
+def browse_share_folder(
+    token: str,
+    path: str = Form(default=""),
+    password: str = Form(default=None)
+):
+    from backend.services.share_service import browse_share_service
+    return browse_share_service(token, password, path)
+
+@router.get("/api/share/{token}/download-folder")
+def download_share_folder(
+    token: str,
+    password: str = Query(default=None),
+    path: str = Query(default=""),
+    request: Request = None,
+):
+    from backend.services.share_service import download_folder_service
+    return download_folder_service(token, password, path, request)

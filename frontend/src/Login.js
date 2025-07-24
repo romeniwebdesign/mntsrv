@@ -24,6 +24,8 @@ function Login({ onLogin }) {
         throw new Error("Login fehlgeschlagen");
       }
       const data = await res.json();
+      // Store user info in localStorage
+      localStorage.setItem("user", JSON.stringify(data.user));
       onLogin(data.access_token);
     } catch (err) {
       setError(err.message);

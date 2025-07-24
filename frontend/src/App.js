@@ -6,22 +6,65 @@ import { Navbar, Container, Nav, Button, NavDropdown } from "react-bootstrap";
 import { Routes, Route, useNavigate, useLocation, Navigate, Link } from "react-router-dom";
 import SharesPage from "./SharesPage";
 import StatsPage from "./StatsPage";
+import UserManagement from "./UserManagement";
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem("token") || "");
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem("user");
+    return stored ? JSON.parse(stored) : null;
+  });
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleLogin = (newToken) => {
     setToken(newToken);
     localStorage.setItem("token", newToken);
+    
+    // Update user state from localStorage after login
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
   };
 
   const handleLogout = () => {
     setToken("");
+    setUser(null);
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/browse");
   };
+
+  // Global error handler for invalid sessions
+  const handleAuthError = () => {
+    console.log("Authentication error detected, logging out...");
+    handleLogout();
+  };
+
+  // Create a fetch wrapper that handles auth errors
+  const authFetch = async (url, options = {}) => {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (response.status === 401) {
+      handleAuthError();
+      throw new Error("Authentication failed");
+    }
+
+    return response;
+  };
+
+  // Make authFetch available globally
+  React.useEffect(() => {
+    window.authFetch = authFetch;
+    window.handleAuthError = handleAuthError;
+  }, [token]);
 
   const handleNavigate = (item) => {
     if (item.path) {
@@ -59,8 +102,13 @@ function App() {
             <Nav.Link as={Link} to="/stats" className="text-dark">
               Stats
             </Nav.Link>
+            {user && user.role === "admin" && (
+              <Nav.Link as={Link} to="/users" className="text-dark">
+                Users
+              </Nav.Link>
+            )}
             <Nav.Item className="d-flex align-items-center">
-              <SearchBar token={token} onNavigate={handleNavigate} />
+              <SearchBar token={token} onNavigate={handleNavigate} authFetch={authFetch} />
             </Nav.Item>
           </Nav>
           <Nav className="ms-auto">
@@ -87,18 +135,26 @@ function App() {
               element={
                 <FolderBrowser
                   token={token}
+                  user={user}
+                  authFetch={authFetch}
                   key={location.pathname}
                 />
               }
             />
             <Route
               path="/shares"
-              element={<SharesPage token={token} />}
+              element={<SharesPage token={token} user={user} authFetch={authFetch} />}
             />
             <Route
               path="/stats"
-              element={<StatsPage token={token} />}
+              element={<StatsPage token={token} authFetch={authFetch} />}
             />
+            {user && user.role === "admin" && (
+              <Route
+                path="/users"
+                element={<UserManagement token={token} authFetch={authFetch} />}
+              />
+            )}
             <Route path="*" element={<Navigate to="/browse" replace />} />
           </Routes>
         </div>

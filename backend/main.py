@@ -83,10 +83,12 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 from fastapi.security import OAuth2PasswordBearer
 from backend.routes.auth import router as auth_router
 from backend.routes.share import router as share_router
-from backend.services.auth_service import get_user, verify_password, create_access_token, get_current_user
+from backend.routes.users import router as users_router
+from backend.services.auth_service import get_user, verify_password, create_access_token, get_current_user, require_permission
 
 app.include_router(auth_router)
 app.include_router(share_router)
+app.include_router(users_router)
 
 @app.get("/api/ping")
 def ping():
@@ -213,6 +215,94 @@ def search_endpoint(
         raise HTTPException(status_code=403, detail="Pfad nicht erlaubt")
     results = search_files(root, q, max_results=limit)
     return {"results": results}
+
+@app.delete("/api/file")
+def delete_file(
+    path: str = Query(...),
+    user=Depends(require_permission("delete"))
+):
+    """Delete a file or directory"""
+    if not path or path in ("", "/"):
+        raise HTTPException(status_code=400, detail="Invalid path")
+    
+    # Prevent directory traversal and absolute paths
+    if os.path.isabs(path) or ".." in path.split(os.path.sep):
+        raise HTTPException(status_code=400, detail="Invalid path: directory traversal or absolute paths are not allowed")
+    
+    rel_path = path.lstrip("/")
+    abs_path = os.path.join(SCAN_ROOT, rel_path)
+    
+    if not is_safe_path(SCAN_ROOT, abs_path):
+        raise HTTPException(status_code=403, detail="Path not allowed")
+    
+    if not os.path.exists(abs_path):
+        raise HTTPException(status_code=404, detail="File or directory not found")
+    
+    try:
+        import shutil
+        if os.path.isdir(abs_path):
+            shutil.rmtree(abs_path)
+        else:
+            os.remove(abs_path)
+        
+        # Invalidate cache for parent directory
+        parent_dir = os.path.dirname(abs_path)
+        invalidate_cache(parent_dir)
+        
+        return {"status": "deleted", "path": path}
+    except Exception as e:
+        import logging
+        logging.error(f"Error while deleting file: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred while deleting the file.")
+
+@app.put("/api/file/rename")
+def rename_file(
+    old_path: str = Query(...),
+    new_name: str = Query(...),
+    user=Depends(require_permission("rename"))
+):
+    """Rename a file or directory"""
+    if not old_path or old_path in ("", "/"):
+        raise HTTPException(status_code=400, detail="Invalid path")
+    
+    if not new_name or "/" in new_name or "\\" in new_name:
+        raise HTTPException(status_code=400, detail="Invalid new name")
+    
+    rel_path = old_path.lstrip("/")
+    abs_old_path = os.path.join(SCAN_ROOT, rel_path)
+    
+    if not is_safe_path(SCAN_ROOT, abs_old_path):
+        raise HTTPException(status_code=403, detail="Path not allowed")
+    
+    if not os.path.exists(abs_old_path):
+        raise HTTPException(status_code=404, detail="File or directory not found")
+    
+    # Create new path
+    parent_dir = os.path.dirname(abs_old_path)
+    abs_new_path = os.path.join(parent_dir, new_name)
+    
+    if not is_safe_path(SCAN_ROOT, abs_new_path):
+        raise HTTPException(status_code=403, detail="New path not allowed")
+    
+    if os.path.exists(abs_new_path):
+        raise HTTPException(status_code=400, detail="File or directory with new name already exists")
+    
+    try:
+        os.rename(abs_old_path, abs_new_path)
+        
+        # Invalidate cache for parent directory
+        invalidate_cache(parent_dir)
+        
+        # Calculate new relative path
+        new_rel_path = os.path.relpath(abs_new_path, SCAN_ROOT)
+        if new_rel_path == ".":
+            new_rel_path = ""
+        
+        return {"status": "renamed", "old_path": old_path, "new_path": new_rel_path, "new_name": new_name}
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to rename file: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred while renaming the file.")
 
 # StaticFiles für Frontend (nur auf /static mounten)
 if os.path.exists(frontend_build_path):

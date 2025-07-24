@@ -9,5 +9,17 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = get_user(form_data.username)
     if not user or not verify_password(form_data.password, user):
         raise HTTPException(status_code=401, detail="Incorrect username or password")
-    access_token = create_access_token(data={"sub": user["username"], "is_admin": user["is_admin"]})
-    return {"access_token": access_token, "token_type": "bearer"}
+    access_token = create_access_token(data={
+        "sub": user["username"], 
+        "is_admin": user["is_admin"],
+        "role": user["role"]
+    })
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "user": {
+            "username": user["username"],
+            "role": user["role"],
+            "is_admin": user["is_admin"]
+        }
+    }

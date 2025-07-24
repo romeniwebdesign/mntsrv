@@ -10,18 +10,35 @@ function ShareView() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [askPassword, setAskPassword] = useState(false);
+  const [currentPath, setCurrentPath] = useState(""); // Track current folder path within share
+  const [shareInfo, setShareInfo] = useState(null); // Store original share info
 
-  const fetchShare = async (pw = null) => {
+  const fetchShare = async (pw = null, path = "") => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-      params.append("password", pw || "");
-      const res = await fetch(`/api/share/${token}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: params.toString(),
-      });
+      let res;
+      if (path) {
+        // Browse subfolder
+        const params = new URLSearchParams();
+        params.append("password", pw || password || "");
+        params.append("path", path);
+        res = await fetch(`/api/share/${token}/browse`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString(),
+        });
+      } else {
+        // Access root share
+        const params = new URLSearchParams();
+        params.append("password", pw || "");
+        res = await fetch(`/api/share/${token}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString(),
+        });
+      }
+
       if (res.status === 401) {
         setAskPassword(true);
         if (pw) {
@@ -42,9 +59,11 @@ function ShareView() {
       if (ct && ct.startsWith("application/json")) {
         const d = await res.json();
         setData(d);
+        setCurrentPath(path);
+        if (!shareInfo) setShareInfo(d); // Store original share info
         setAskPassword(false);
       } else {
-        // Datei-Download (legacy, fallback)
+        // File download (legacy, fallback)
         window.location = `/api/share/${token}/download${pw ? "?password=" + encodeURIComponent(pw) : ""}`;
       }
     } catch (err) {
@@ -64,9 +83,48 @@ function ShareView() {
   };
 
   const getDownloadUrl = (filename, pw) => {
-    let url = `/api/share/${token}/download?file=${encodeURIComponent(filename)}`;
+    const filePath = currentPath ? `${currentPath}/${filename}` : filename;
+    let url = `/api/share/${token}/download?file=${encodeURIComponent(filePath)}`;
     if (pw) url += `&password=${encodeURIComponent(pw)}`;
     return url;
+  };
+
+  const getFolderDownloadUrl = (folderPath = currentPath) => {
+    let url = `/api/share/${token}/download-folder`;
+    const params = new URLSearchParams();
+    if (password) params.append("password", password);
+    if (folderPath) params.append("path", folderPath);
+    if (params.toString()) url += `?${params.toString()}`;
+    return url;
+  };
+
+  const handleFolderClick = (folderName) => {
+    const newPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+    fetchShare(password, newPath);
+  };
+
+  const handleBreadcrumbClick = (targetPath) => {
+    fetchShare(password, targetPath);
+  };
+
+  const handleFolderZipDownload = (folderPath = currentPath) => {
+    window.open(getFolderDownloadUrl(folderPath), '_blank');
+  };
+
+  // Create breadcrumb navigation
+  const getBreadcrumbs = () => {
+    const segments = currentPath ? currentPath.split("/").filter(Boolean) : [];
+    const breadcrumbs = [
+      { name: "🏠", path: "" }
+    ];
+    
+    let buildPath = "";
+    for (const segment of segments) {
+      buildPath = buildPath ? `${buildPath}/${segment}` : segment;
+      breadcrumbs.push({ name: segment, path: buildPath });
+    }
+    
+    return breadcrumbs;
   };
 
   // Helper to format file size
@@ -163,35 +221,101 @@ function ShareView() {
           )}
           {/* Folder share */}
           {data && data.type === "folder" && (
-            <ListGroup className="mb-2">
-              {[...data.entries]
-                .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
-                .map((entry) => (
-                  <ListGroup.Item
-                    key={`${entry.name}-${entry.is_dir ? "dir" : "file"}`}
-                    style={{
-                      border: "none",
-                      borderBottom: "1px solid #eee",
-                      padding: "0.5rem 1rem",
-                      display: "block"
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
-                      {entry.is_dir ? (
-                        <span style={{ flex: 1 }}>
-                          📁 {entry.name}
-                        </span>
-                      ) : (
-                        <SaveFileWithProgress
-                          url={getDownloadUrl(entry.name, password)}
-                          filename={entry.name}
-                          className="p-0 m-0 border-0 shadow-none rounded-0"
-                        />
-                      )}
-                    </div>
-                  </ListGroup.Item>
-                ))}
-            </ListGroup>
+            <div>
+              {/* Breadcrumb navigation */}
+              {currentPath && (
+                <div className="mb-3">
+                  <nav aria-label="breadcrumb">
+                    <ol className="breadcrumb mb-0">
+                      {getBreadcrumbs().map((crumb, index) => (
+                        <li 
+                          key={index}
+                          className={`breadcrumb-item ${index === getBreadcrumbs().length - 1 ? 'active' : ''}`}
+                        >
+                          {index === getBreadcrumbs().length - 1 ? (
+                            crumb.name
+                          ) : (
+                            <Button
+                              variant="link"
+                              className="p-0 text-decoration-none"
+                              onClick={() => handleBreadcrumbClick(crumb.path)}
+                            >
+                              {crumb.name}
+                            </Button>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </nav>
+                </div>
+              )}
+
+              {/* Bulk download buttons */}
+              <div className="mb-3 d-flex gap-2 justify-content-center">
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  onClick={() => handleFolderZipDownload()}
+                >
+                  📦 Download {currentPath ? 'Folder' : 'All'} as ZIP
+                </Button>
+              </div>
+
+              <ListGroup className="mb-2">
+                {[...data.entries]
+                  .sort((a, b) => {
+                    // Sort folders first, then files, both alphabetically
+                    if (a.is_dir && !b.is_dir) return -1;
+                    if (!a.is_dir && b.is_dir) return 1;
+                    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+                  })
+                  .map((entry) => (
+                    <ListGroup.Item
+                      key={`${entry.name}-${entry.is_dir ? "dir" : "file"}`}
+                      action={entry.is_dir}
+                      onClick={entry.is_dir ? () => handleFolderClick(entry.name) : undefined}
+                      style={{
+                        border: "none",
+                        borderBottom: "1px solid #eee",
+                        padding: "0.5rem 1rem",
+                        display: "block",
+                        cursor: entry.is_dir ? "pointer" : "default"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+                        {entry.is_dir ? (
+                          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <span>📁 {entry.name}</span>
+                            <div className="d-flex gap-1">
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const folderPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+                                  handleFolderZipDownload(folderPath);
+                                }}
+                              >
+                                📦 ZIP
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <span>📄 {entry.name}</span>
+                            <SaveFileWithProgress
+                              url={getDownloadUrl(entry.name, password)}
+                              filename={entry.name}
+                              className="btn btn-sm btn-outline-success"
+                              style={{ minWidth: "80px" }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </ListGroup.Item>
+                  ))}
+              </ListGroup>
+            </div>
           )}
         </Card.Body>
         <Card.Footer className="text-muted">

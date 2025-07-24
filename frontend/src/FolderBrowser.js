@@ -5,7 +5,12 @@ import { useParams, useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 200;
 
-function FolderBrowser({ token }) {
+// Helper function to construct file/folder paths
+const constructPath = (basePath, itemName) => {
+  return basePath ? `${basePath}/${itemName}` : itemName;
+};
+
+function FolderBrowser({ token, user, authFetch }) {
   const params = useParams();
   const navigate = useNavigate();
   const scanRoot = window.SCAN_ROOT || "/";
@@ -19,6 +24,13 @@ function FolderBrowser({ token }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sharePath, setSharePath] = useState(null);
+  const [renamingItem, setRenamingItem] = useState(null);
+  const [newName, setNewName] = useState("");
+
+  // Permission checks
+  const canShare = user && ["admin", "power", "standard"].includes(user.role);
+  const canDelete = user && ["admin", "power"].includes(user.role);
+  const canRename = user && ["admin", "power"].includes(user.role);
 
   const fetchFolder = async (newAbsPath = absPath, newOffset = 0) => {
     setLoading(true);
@@ -28,9 +40,7 @@ function FolderBrowser({ token }) {
       if (newAbsPath) params.append("path", newAbsPath);
       params.append("offset", newOffset);
       params.append("limit", PAGE_SIZE);
-      const res = await fetch(`/api/folder?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authFetch(`/api/folder?${params.toString()}`);
       if (!res.ok) throw new Error("Fehler beim Laden des Ordners");
       const data = await res.json();
       setPath(data.path);
@@ -38,7 +48,9 @@ function FolderBrowser({ token }) {
       setOffset(newOffset + data.entries.length);
       setHasMore(data.has_more);
     } catch (err) {
-      setError(err.message);
+      if (err.message !== "Authentication failed") {
+        setError(err.message);
+      }
     }
     setLoading(false);
   };
@@ -50,7 +62,7 @@ function FolderBrowser({ token }) {
 
   const handleOpenFolder = (entry) => {
     if (entry.is_dir) {
-      let rel = relPath ? relPath + "/" + entry.name : entry.name;
+      let rel = constructPath(relPath, entry.name);
       navigate("/browse" + (rel ? "/" + rel : ""));
     }
   };
@@ -65,6 +77,65 @@ function FolderBrowser({ token }) {
 
   const handleShowMore = () => {
     fetchFolder(absPath, offset);
+  };
+
+  const handleDelete = async (entry) => {
+    if (!window.confirm(`Möchten Sie "${entry.name}" wirklich löschen?`)) {
+      return;
+    }
+
+    try {
+      const itemPath = constructPath(path, entry.name);
+      const response = await authFetch(`/api/file?path=${encodeURIComponent(itemPath)}`, {
+        method: "DELETE"
+      });
+
+      if (response.ok) {
+        // Refresh the folder view
+        fetchFolder(absPath, 0);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || "Failed to delete item");
+      }
+    } catch (err) {
+      setError("Error deleting item: " + err.message);
+    }
+  };
+
+  const handleRename = async (entry) => {
+    setRenamingItem(entry);
+    setNewName(entry.name);
+  };
+
+  const handleRenameSubmit = async () => {
+    if (!newName || newName === renamingItem.name) {
+      setRenamingItem(null);
+      return;
+    }
+
+    try {
+      const itemPath = constructPath(path, renamingItem.name);
+      const response = await authFetch(`/api/file/rename?old_path=${encodeURIComponent(itemPath)}&new_name=${encodeURIComponent(newName)}`, {
+        method: "PUT"
+      });
+
+      if (response.ok) {
+        setRenamingItem(null);
+        setNewName("");
+        // Refresh the folder view
+        fetchFolder(absPath, 0);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || "Failed to rename item");
+      }
+    } catch (err) {
+      setError("Error renaming item: " + err.message);
+    }
+  };
+
+  const handleRenameCancel = () => {
+    setRenamingItem(null);
+    setNewName("");
   };
 
   // Breadcrumbs (relativ zu SCAN_ROOT, mit Router-Navigation)
@@ -152,7 +223,7 @@ function FolderBrowser({ token }) {
                 className={isLast ? "d-flex align-items-center" : undefined}
               >
                 {bc.name}
-                {isLast && (
+                {isLast && canShare && (
                   <Button
                     size="sm"
                     variant="outline-success"
@@ -230,45 +301,112 @@ function FolderBrowser({ token }) {
                   )}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", marginLeft: 12 }}>
-                  {entry.is_dir && (
-                    <Button
-                      size="sm"
-                      variant="outline-info"
-                      className="me-2"
-                      onClick={async e => {
-                        e.stopPropagation();
-                        try {
-                          await fetch(`/api/scan?path=${encodeURIComponent(path ? path + "/" + entry.name : entry.name)}`, {
-                            method: "POST",
-                            headers: { Authorization: `Bearer ${token}` },
-                          });
-                          // Optional: Feedback, z.B. Toast oder Alert
-                        } catch {}
-                      }}
-                    >
-                      Rescan
-                    </Button>
+                  {renamingItem && renamingItem.name === entry.name ? (
+                    <div className="d-flex align-items-center">
+                      <input
+                        type="text"
+                        className="form-control form-control-sm me-2"
+                        style={{ width: "150px" }}
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleRenameSubmit();
+                          if (e.key === "Escape") handleRenameCancel();
+                        }}
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Button
+                        size="sm"
+                        variant="success"
+                        className="me-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRenameSubmit();
+                        }}
+                      >
+                        ✓
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRenameCancel();
+                        }}
+                      >
+                        ✗
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      {entry.is_dir && (
+                        <Button
+                          size="sm"
+                          variant="outline-info"
+                          className="me-2"
+                          onClick={async e => {
+                            e.stopPropagation();
+                            try {
+                              await authFetch(`/api/scan?path=${encodeURIComponent(constructPath(path, entry.name))}`, {
+                                method: "POST",
+                              });
+                            } catch {}
+                          }}
+                        >
+                          Rescan
+                        </Button>
+                      )}
+                      {!entry.is_dir && (
+                        <a
+                          href={`/share/${btoa(encodeURIComponent(constructPath(path, entry.name)))}`}
+                          className="btn btn-sm btn-outline-primary me-2"
+                          download={entry.name}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          Download
+                        </a>
+                      )}
+                      {canShare && (
+                        <Button
+                          size="sm"
+                          variant="outline-success"
+                          className="me-2"
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSharePath(constructPath(path, entry.name));
+                          }}
+                        >
+                          Share
+                        </Button>
+                      )}
+                      {canRename && (
+                        <Button
+                          size="sm"
+                          variant="outline-warning"
+                          className="me-2"
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleRename(entry);
+                          }}
+                        >
+                          Rename
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          size="sm"
+                          variant="outline-danger"
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleDelete(entry);
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </>
                   )}
-                  {!entry.is_dir && (
-                    <a
-                      href={`/share/${btoa(encodeURIComponent((path ? path + "/" : "") + entry.name))}`}
-                      className="btn btn-sm btn-outline-primary me-2"
-                      download={entry.name}
-                      onClick={e => e.stopPropagation()}
-                    >
-                      Download
-                    </a>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="outline-success"
-                    onClick={e => {
-                      e.stopPropagation();
-                      setSharePath(path ? `${path}/${entry.name}` : entry.name);
-                    }}
-                  >
-                    Freigeben
-                  </Button>
                 </div>
               </div>
             </ListGroup.Item>
@@ -280,6 +418,7 @@ function FolderBrowser({ token }) {
           token={token}
           path={sharePath}
           onClose={() => setSharePath(null)}
+          authFetch={authFetch}
         />
       )}
       {hasMore && (

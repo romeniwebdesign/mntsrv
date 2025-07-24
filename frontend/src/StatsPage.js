@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, Spinner, Alert, ListGroup } from "react-bootstrap";
 
-function StatsPage({ token }) {
+function StatsPage({ token, authFetch }) {
   const [scanStatus, setScanStatus] = useState(null);
   const [shares, setShares] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,15 +13,19 @@ function StatsPage({ token }) {
 
     Promise.all([
       fetch("/api/scan_status").then((res) => res.json()),
-      fetch("/api/shares", { headers: { Authorization: `Bearer ${token}` } }).then((res) => res.json())
+      authFetch("/api/shares").then((res) => res.json())
     ])
       .then(([scanStatusData, sharesData]) => {
         setScanStatus(scanStatusData);
         setShares(sharesData);
       })
-      .catch((err) => setError("Fehler beim Laden der Statistiken"))
+      .catch((err) => {
+        if (err.message !== "Authentication failed") {
+          setError("Fehler beim Laden der Statistiken");
+        }
+      })
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, authFetch]);
 
   function formatDateTime(iso) {
     if (!iso) return "";

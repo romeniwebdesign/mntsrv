@@ -20,7 +20,7 @@ def verify_password(plain_password, user):
 def get_user(username):
     # Admin from ENV
     if username == ADMIN_USER:
-        return {"username": ADMIN_USER, "password_hash": None, "is_admin": True}
+        return {"username": ADMIN_USER, "password_hash": None, "is_admin": True, "role": "admin"}
     # User from users.json
     try:
         users_path = os.path.join(os.path.dirname(__file__), "..", "config", "users.json")
@@ -28,7 +28,12 @@ def get_user(username):
             users = json.load(f)
         for user in users:
             if user["username"] == username:
-                return {"username": user["username"], "password_hash": user["password_hash"], "is_admin": False}
+                return {
+                    "username": user["username"], 
+                    "password_hash": user["password_hash"], 
+                    "is_admin": False,
+                    "role": user.get("role", "standard")
+                }
     except Exception:
         pass
     return None
@@ -58,3 +63,27 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail="Token expired")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+def has_permission(user, permission):
+    """Check if user has specific permission based on their role"""
+    role = user.get("role", "standard")
+    
+    permissions = {
+        "admin": ["browse", "download", "share", "delete", "rename", "manage_users"],
+        "power": ["browse", "download", "share", "delete", "rename"],
+        "standard": ["browse", "download", "share"],
+        "readonly": ["browse", "download"]
+    }
+    
+    return permission in permissions.get(role, [])
+
+def require_permission(permission):
+    """Decorator to require specific permission"""
+    def decorator(user=Depends(get_current_user)):
+        if not has_permission(user, permission):
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Insufficient permissions. Required: {permission}"
+            )
+        return user
+    return decorator
