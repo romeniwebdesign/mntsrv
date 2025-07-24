@@ -310,9 +310,8 @@ def download_folder_service(token, password, path, request):
     if not os.path.exists(target_path):
         raise HTTPException(status_code=404, detail="Path not found")
     
-    def create_zip():
-        zip_buffer = BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+    def stream_zip():
+        with zipfile.ZipFile(BytesIO(), 'w', zipfile.ZIP_DEFLATED) as zip_file:
             if os.path.isfile(target_path):
                 # Single file
                 zip_file.write(target_path, os.path.basename(target_path))
