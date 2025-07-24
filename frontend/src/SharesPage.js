@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ListGroup, Button, Spinner, Alert, Form, InputGroup, Card } from "react-bootstrap";
 
-function SharesPage({ token }) {
+function SharesPage({ token, user, authFetch }) {
   const [shares, setShares] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -10,29 +10,32 @@ function SharesPage({ token }) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch("/api/shares", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    authFetch("/api/shares")
       .then((res) => {
         if (!res.ok) throw new Error("Fehler beim Laden der Shares");
         return res.json();
       })
       .then((data) => setShares(data))
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        if (err.message !== "Authentication failed") {
+          setError(err.message);
+        }
+      })
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, authFetch]);
 
   const handleDelete = async (tokenToDelete) => {
     if (!window.confirm("Freigabe wirklich löschen?")) return;
     try {
-      const res = await fetch(`/api/share/${tokenToDelete}`, {
+      const res = await authFetch(`/api/share/${tokenToDelete}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Fehler beim Löschen");
       setShares((s) => s.filter((share) => share.token !== tokenToDelete));
     } catch (err) {
-      alert(err.message);
+      if (err.message !== "Authentication failed") {
+        alert(err.message);
+      }
     }
   };
 
@@ -69,6 +72,11 @@ function SharesPage({ token }) {
                   <div>
                     <b>Gültig bis:</b> {formatDate(share.expires_at)}
                   </div>
+                  {user && user.role === "admin" && (
+                    <div>
+                      <b>Erstellt von:</b> {share.created_by || "unknown"}
+                    </div>
+                  )}
                   {share.password_plain && (
                     <div>
                       <b>Passwort:</b> <span style={{ fontFamily: "monospace" }}>{share.password_plain}</span>

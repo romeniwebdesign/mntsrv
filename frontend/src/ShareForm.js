@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Form, Button, Alert, InputGroup, Modal } from "react-bootstrap";
 
-function ShareForm({ token, path, onClose }) {
+function ShareForm({ token, path, onClose, authFetch }) {
   const [password, setPassword] = useState("");
   const [expiresIn, setExpiresIn] = useState(60); // Value in the selected unit
   const [timeUnit, setTimeUnit] = useState("minutes"); // minutes, hours, days
@@ -27,15 +27,16 @@ function ShareForm({ token, path, onClose }) {
       }
       
       params.append("expires_in", expiresInMinutes * 60); // Backend expects seconds
-      const res = await fetch(`/api/share?${params.toString()}`, {
+      const res = await authFetch(`/api/share?${params.toString()}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Fehler beim Erstellen des Freigabelinks");
       const data = await res.json();
       setShareUrl(window.location.origin + data.share_url);
     } catch (err) {
-      setError(err.message);
+      if (err.message !== "Authentication failed") {
+        setError(err.message);
+      }
     }
     setLoading(false);
   };

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Form, FormControl, Button, ListGroup, InputGroup, Spinner } from "react-bootstrap";
 
-function SearchBar({ token, onNavigate }) {
+function SearchBar({ token, onNavigate, authFetch }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
@@ -15,9 +15,7 @@ function SearchBar({ token, onNavigate }) {
     try {
       const params = new URLSearchParams();
       params.append("q", query);
-      const res = await fetch(`/api/search?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authFetch(`/api/search?${params.toString()}`);
       if (!res.ok) throw new Error("Fehler bei der Suche");
       const data = await res.json();
       setResults(data.results || []);
@@ -35,7 +33,7 @@ function SearchBar({ token, onNavigate }) {
   };
 
   return (
-    <div style={{ position: "relative", minWidth: 300 }}>
+    <div style={{ position: "relative", minWidth: 300, marginLeft: "2rem" }}>
       <Form className="d-flex" onSubmit={handleSearch} autoComplete="off">
         <InputGroup>
           <FormControl
