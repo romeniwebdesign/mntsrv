@@ -199,7 +199,30 @@ def download_share_service(token, password, file, request):
     )
 
 def browse_share_service(token, password, path):
-    """Browse a subfolder within a shared folder"""
+    """
+    Browse a subfolder within a shared folder.
+
+    Args:
+        token (str): The unique token identifying the shared folder.
+        password (str): The password for accessing the shared folder, if required.
+        path (str): The relative path within the shared folder to browse.
+
+    Returns:
+        dict: A dictionary containing the folder's metadata and its entries. The structure includes:
+            - type (str): Always "folder".
+            - path (str): The relative path within the share.
+            - share_path (str): The base path of the shared folder.
+            - entries (list): A list of entries (files and subfolders) in the folder.
+            - token (str): The token used for accessing the share.
+            - password_required (bool): Whether a password is required to access the share.
+
+    Raises:
+        HTTPException: If any of the following conditions occur:
+            - 404: The share is not found.
+            - 403: The share has expired, or the path is not allowed.
+            - 401: The password is required or incorrect.
+            - 400: The share is not a folder, or an error occurs during folder scanning.
+    """
     shares = load_shares()
     share = next((s for s in shares if s["token"] == token), None)
     if not share:
