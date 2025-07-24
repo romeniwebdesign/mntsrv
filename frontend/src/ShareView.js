@@ -42,7 +42,7 @@ function ShareView() {
       if (res.status === 401) {
         setAskPassword(true);
         if (pw) {
-          setError("Wrong password.");
+          setError("Falsches Passwort.");
         } else {
           setError(null);
         }
