@@ -309,7 +309,7 @@ function FolderBrowser({ token, user, authFetch }) {
                         style={{ width: "150px" }}
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
-                        onKeyPress={(e) => {
+                        onKeyDown={(e) => {
                           if (e.key === "Enter") handleRenameSubmit();
                           if (e.key === "Escape") handleRenameCancel();
                         }}
