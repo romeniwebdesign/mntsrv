@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import datetime, timezone
 from fastapi import HTTPException
 from backend.services.auth_service import pwd_context
 
@@ -52,7 +53,7 @@ def create_user_service(username, password, role="standard"):
         "username": username,
         "password_hash": password_hash,
         "role": role,
-        "created_at": "2025-01-24T22:44:00Z"  # You might want to use actual timestamp
+        "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     }
     
     users.append(new_user)
