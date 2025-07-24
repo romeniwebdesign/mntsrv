@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Form, Button, Alert, ListGroup, Spinner, Card, Container } from "react-bootstrap";
+import { Form, Button, Alert, ListGroup, Spinner, Card, Container, Breadcrumb } from "react-bootstrap";
 import SaveFileWithProgress from "./SaveFileWithProgress";
 
 function ShareView() {
@@ -147,55 +147,42 @@ function ShareView() {
     </Container>
   );
 
-  return (
-    <Container className="d-flex flex-column align-items-center justify-content-center min-vh-100">
-      {/* Logo */}
-      <div className="text-center mb-4">
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: "1.5rem",
-            letterSpacing: 1,
-            color: "#1b4571",
-            marginBottom: 2,
-            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-          }}
-        >
-          MNTSRV
+  // Show password form in centered layout if needed
+  if (askPassword) {
+    return (
+      <Container className="d-flex flex-column align-items-center justify-content-center min-vh-100">
+        {/* Logo */}
+        <div className="text-center mb-4">
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: "1.5rem",
+              letterSpacing: 1,
+              color: "#1b4571",
+              marginBottom: 2,
+              fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+            }}
+          >
+            MNTSRV
+          </div>
+          <div
+            style={{
+              fontSize: "1rem",
+              fontWeight: 400,
+              letterSpacing: 2,
+              color: "#9289A6",
+              lineHeight: 1.2,
+              fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+            }}
+          >
+            MOUNT. BROWSE. SHARE.
+          </div>
         </div>
-        <div
-          style={{
-            fontSize: "1rem",
-            fontWeight: 400,
-            letterSpacing: 2,
-            color: "#9289A6",
-            lineHeight: 1.2,
-            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-          }}
-        >
-          MOUNT. BROWSE. SHARE.
-        </div>
-      </div>
-      <Card className="text-center w-100" style={{ maxWidth: 600 }}>
-        <Card.Header>
-          {data
-            ? data.type === "file"
-              ? data.path
-                ? data.path.split("/").pop()
-                : "Datei"
-              : data.type === "folder"
-              ? data.path
-                ? data.path.split("/").filter(Boolean).pop() || "/"
-                : "Ordner"
-              : "Freigabe"
-            : "Freigabe"}
-        </Card.Header>
-        <Card.Body>
-          {/* Error messages */}
-          {error && <Alert variant="danger">{error}</Alert>}
-          {/* Password form */}
-          {askPassword && (
-            <Form onSubmit={handlePassword} className="mb-3">
+        <Card className="text-center w-100" style={{ maxWidth: 400 }}>
+          <Card.Header>Freigabe</Card.Header>
+          <Card.Body>
+            {error && <Alert variant="danger">{error}</Alert>}
+            <Form onSubmit={handlePassword}>
               <Form.Group>
                 <Form.Label>Passwort</Form.Label>
                 <Form.Control
@@ -209,133 +196,193 @@ function ShareView() {
                 Anzeigen
               </Button>
             </Form>
-          )}
-          {/* File share */}
-          {data && data.type === "file" && (
-            <div>
+          </Card.Body>
+        </Card>
+      </Container>
+    );
+  }
+
+  // Full-width layout for file/folder content
+  return (
+    <Container fluid className="py-3">
+      {/* Header with logo and share info */}
+      <div className="d-flex align-items-center justify-content-between mb-3 px-3">
+        <div className="d-flex align-items-center">
+          <div className="me-3">
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: "1.2rem",
+                letterSpacing: 1,
+                color: "#1b4571",
+                fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+              }}
+            >
+              MNTSRV
+            </div>
+            <div
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 400,
+                letterSpacing: 1,
+                color: "#9289A6",
+                lineHeight: 1,
+                fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+              }}
+            >
+              SHARE
+            </div>
+          </div>
+          <div>
+            <h4 className="mb-0 text-mntsrv-dark">
+              {data
+                ? data.type === "file"
+                  ? data.path
+                    ? data.path.split("/").pop()
+                    : "Datei"
+                  : data.type === "folder"
+                  ? data.path
+                    ? data.path.split("/").filter(Boolean).pop() || "Root"
+                    : "Ordner"
+                  : "Freigabe"
+                : "Freigabe"}
+            </h4>
+            {data && data.type === "folder" && (
+              <small className="text-muted">
+                {data.entries.filter(e => !e.is_dir).length} Dateien,{" "}
+                {formatSize(
+                  data.entries
+                    .filter(e => !e.is_dir)
+                    .reduce((sum, e) => sum + (e.size || 0), 0)
+                )}
+              </small>
+            )}
+            {data && data.type === "file" && (
+              <small className="text-muted">
+                Dateigröße: {formatSize(data.size)}
+              </small>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Error messages */}
+      {error && (
+        <div className="px-3 mb-3">
+          <Alert variant="danger">{error}</Alert>
+        </div>
+      )}
+
+      {/* File share */}
+      {data && data.type === "file" && (
+        <div className="px-3">
+          <Card>
+            <Card.Body className="text-center">
+              <div className="mb-3">
+                <h5>📄 {data.path ? data.path.split("/").pop() : "Datei"}</h5>
+                <p className="text-muted mb-3">Dateigröße: {formatSize(data.size)}</p>
+              </div>
               <SaveFileWithProgress
                 url={getDownloadUrl(password)}
                 filename={data.path ? data.path.split("/").pop() : "download"}
               />
-            </div>
-          )}
-          {/* Folder share */}
-          {data && data.type === "folder" && (
-            <div>
-              {/* Breadcrumb navigation */}
-              {currentPath && (
-                <div className="mb-3">
-                  <nav aria-label="breadcrumb">
-                    <ol className="breadcrumb mb-0">
-                      {getBreadcrumbs().map((crumb, index) => (
-                        <li 
-                          key={index}
-                          className={`breadcrumb-item ${index === getBreadcrumbs().length - 1 ? 'active' : ''}`}
-                        >
-                          {index === getBreadcrumbs().length - 1 ? (
-                            crumb.name
-                          ) : (
-                            <Button
-                              variant="link"
-                              className="p-0 text-decoration-none"
-                              onClick={() => handleBreadcrumbClick(crumb.path)}
-                            >
-                              {crumb.name}
-                            </Button>
+            </Card.Body>
+          </Card>
+        </div>
+      )}
+
+      {/* Folder share */}
+      {data && data.type === "folder" && (
+        <div>
+          {/* Breadcrumb navigation */}
+          <div className="px-3 mb-3">
+            <Breadcrumb className="mb-0">
+              {getBreadcrumbs().map((crumb, index) => {
+                const isLast = index === getBreadcrumbs().length - 1;
+                return (
+                  <Breadcrumb.Item
+                    key={index}
+                    active={isLast}
+                    onClick={!isLast ? () => handleBreadcrumbClick(crumb.path) : undefined}
+                    style={{ cursor: !isLast ? "pointer" : "default" }}
+                  >
+                    {crumb.name}
+                  </Breadcrumb.Item>
+                );
+              })}
+            </Breadcrumb>
+          </div>
+
+          {/* Bulk download buttons */}
+          <div className="px-3 mb-3">
+            <Button
+              variant="outline-primary"
+              size="sm"
+              onClick={() => handleFolderZipDownload()}
+            >
+              📦 Download {currentPath ? 'Folder' : 'All'} as ZIP
+            </Button>
+          </div>
+
+          {/* File/folder listing */}
+          <div className="px-3">
+            <ListGroup>
+              {[...data.entries]
+                .sort((a, b) => {
+                  // Sort folders first, then files, both alphabetically
+                  if (a.is_dir && !b.is_dir) return -1;
+                  if (!a.is_dir && b.is_dir) return 1;
+                  return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+                })
+                .map((entry) => (
+                  <ListGroup.Item
+                    key={`${entry.name}-${entry.is_dir ? "dir" : "file"}`}
+                    action={entry.is_dir}
+                    onClick={entry.is_dir ? () => handleFolderClick(entry.name) : undefined}
+                    style={{ padding: "0.75rem 1rem" }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="d-flex align-items-center">
+                          <span style={{ wordBreak: "break-word" }}>
+                            {entry.is_dir ? "📁" : "📄"} {entry.name}
+                          </span>
+                          {!entry.is_dir && entry.size !== undefined && (
+                            <span className="text-muted ms-2" style={{ fontSize: "0.85em", flexShrink: 0 }}>
+                              {formatSize(entry.size)}
+                            </span>
                           )}
-                        </li>
-                      ))}
-                    </ol>
-                  </nav>
-                </div>
-              )}
-
-              {/* Bulk download buttons */}
-              <div className="mb-3 d-flex gap-2 justify-content-center">
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  onClick={() => handleFolderZipDownload()}
-                >
-                  📦 Download {currentPath ? 'Folder' : 'All'} as ZIP
-                </Button>
-              </div>
-
-              <ListGroup className="mb-2">
-                {[...data.entries]
-                  .sort((a, b) => {
-                    // Sort folders first, then files, both alphabetically
-                    if (a.is_dir && !b.is_dir) return -1;
-                    if (!a.is_dir && b.is_dir) return 1;
-                    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-                  })
-                  .map((entry) => (
-                    <ListGroup.Item
-                      key={`${entry.name}-${entry.is_dir ? "dir" : "file"}`}
-                      action={entry.is_dir}
-                      onClick={entry.is_dir ? () => handleFolderClick(entry.name) : undefined}
-                      style={{
-                        border: "none",
-                        borderBottom: "1px solid #eee",
-                        padding: "0.5rem 1rem",
-                        display: "block",
-                        cursor: entry.is_dir ? "pointer" : "default"
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", marginLeft: 12, flexShrink: 0 }}>
                         {entry.is_dir ? (
-                          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <span>📁 {entry.name}</span>
-                            <div className="d-flex gap-1">
-                              <Button
-                                variant="outline-primary"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const folderPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
-                                  handleFolderZipDownload(folderPath);
-                                }}
-                              >
-                                📦 ZIP
-                              </Button>
-                            </div>
-                          </div>
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const folderPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+                              handleFolderZipDownload(folderPath);
+                            }}
+                          >
+                            📦 ZIP
+                          </Button>
                         ) : (
-                          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <span>📄 {entry.name}</span>
-                            <SaveFileWithProgress
-                              url={getDownloadUrl(entry.name, password)}
-                              filename={entry.name}
-                              className="btn btn-sm btn-outline-success"
-                              style={{ minWidth: "80px" }}
-                            />
-                          </div>
+                          <SaveFileWithProgress
+                            url={getDownloadUrl(entry.name, password)}
+                            filename={entry.name}
+                            className="btn btn-sm btn-outline-success"
+                            style={{ minWidth: "80px" }}
+                          />
                         )}
                       </div>
-                    </ListGroup.Item>
-                  ))}
-              </ListGroup>
-            </div>
-          )}
-        </Card.Body>
-        <Card.Footer className="text-muted">
-          {/* Progress: SaveFileWithProgress renders its own progress bar per file.
-              If multiple downloads are started, each file shows its own progress. */}
-          {data && data.type === "file" && (
-            <span>Dateigröße: {formatSize(data.size)}</span>
-          )}
-          {data && data.type === "folder" && (
-            <span>
-              {data.entries.filter(e => !e.is_dir).length} Dateien,{" "}
-              {formatSize(
-                data.entries
-                  .filter(e => !e.is_dir)
-                  .reduce((sum, e) => sum + (e.size || 0), 0)
-              )}
-            </span>
-          )}
-        </Card.Footer>
-      </Card>
+                    </div>
+                  </ListGroup.Item>
+                ))}
+            </ListGroup>
+          </div>
+        </div>
+      )}
     </Container>
   );
 }

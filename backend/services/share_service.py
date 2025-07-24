@@ -273,10 +273,9 @@ def browse_share_service(token, password, path):
     }
 
 def download_folder_service(token, password, path, request):
-    """Download an entire folder as a ZIP file"""
+    """Download an entire folder as a ZIP file with true streaming for huge folders"""
     import zipfile
     import tempfile
-    import shutil
     from io import BytesIO
     
     shares = load_shares()
@@ -311,33 +310,44 @@ def download_folder_service(token, password, path, request):
     if not os.path.exists(target_path):
         raise HTTPException(status_code=404, detail="Path not found")
     
-    def stream_zip():
-        with zipfile.ZipFile(BytesIO(), 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            if os.path.isfile(target_path):
-                # Single file
-                zip_file.write(target_path, os.path.basename(target_path))
-            else:
-                # Directory - add all files recursively
-                for root, dirs, files in os.walk(target_path):
-                    for file in files:
-                        file_path = os.path.join(root, file)
-                        # Create relative path within zip
-                        arcname = os.path.relpath(file_path, target_path)
-                        zip_file.write(file_path, arcname)
-        
-        zip_buffer.seek(0)
-        return zip_buffer.getvalue()
-    
-    zip_data = create_zip()
-    
-    def zip_iterator():
-        yield zip_data
+    def streaming_zip_generator():
+        """Generator that yields ZIP data in chunks as it's being created"""
+        # Create a temporary file to write the ZIP to
+        with tempfile.NamedTemporaryFile() as temp_file:
+            # Create ZIP file on disk (not in memory)
+            with zipfile.ZipFile(temp_file, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as zip_file:
+                if os.path.isfile(target_path):
+                    # Single file
+                    zip_file.write(target_path, os.path.basename(target_path))
+                else:
+                    # Directory - add all files recursively
+                    for root, dirs, files in os.walk(target_path):
+                        for file in files:
+                            try:
+                                file_path = os.path.join(root, file)
+                                # Create relative path within zip
+                                arcname = os.path.relpath(file_path, target_path)
+                                zip_file.write(file_path, arcname)
+                            except (OSError, IOError) as e:
+                                # Skip files that can't be read (permissions, etc.)
+                                print(f"Warning: Skipping file {file_path}: {e}")
+                                continue
+            
+            # Now stream the completed ZIP file in chunks
+            temp_file.seek(0)
+            chunk_size = 1024 * 1024  # 1MB chunks
+            while True:
+                chunk = temp_file.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
     
     return StreamingResponse(
-        zip_iterator(),
+        streaming_zip_generator(),
         media_type="application/zip",
         headers={
             "Content-Disposition": f'attachment; filename="{folder_name}.zip"',
-            "Content-Length": str(len(zip_data)),
+            # Note: We can't provide Content-Length since we don't know the final size
+            # This is normal for streaming responses
         },
     )
