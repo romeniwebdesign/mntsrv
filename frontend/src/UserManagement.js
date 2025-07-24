@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Table, Button, Modal, Form, Alert, Badge, Card } from "react-bootstrap";
 
-function UserManagement({ token, authFetch }) {
+function UserManagement({ authFetch }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
