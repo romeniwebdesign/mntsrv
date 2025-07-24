@@ -75,7 +75,7 @@ function FolderBrowser({ token, user, authFetch }) {
   };
 
   const handleDelete = async (entry) => {
-    if (!window.confirm(`Are you sure you want to delete "${entry.name}"?`)) {
+    if (!window.confirm(`Möchten Sie "${entry.name}" wirklich löschen?`)) {
       return;
     }
 
