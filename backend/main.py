@@ -247,7 +247,9 @@ def delete_file(
         
         return {"status": "deleted", "path": path}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete: {str(e)}")
+        import logging
+        logging.error(f"Error while deleting file: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred while deleting the file.")
 
 @app.put("/api/file/rename")
 def rename_file(
