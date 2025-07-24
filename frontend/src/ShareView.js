@@ -51,7 +51,7 @@ function ShareView() {
       }
       if (!res.ok) {
         setAskPassword(false);
-        setError("Share invalid or expired.");
+        setError("Freigabe ungültig oder abgelaufen.");
         setLoading(false);
         return;
       }
