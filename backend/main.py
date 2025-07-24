@@ -225,6 +225,10 @@ def delete_file(
     if not path or path in ("", "/"):
         raise HTTPException(status_code=400, detail="Invalid path")
     
+    # Prevent directory traversal and absolute paths
+    if os.path.isabs(path) or ".." in path.split(os.path.sep):
+        raise HTTPException(status_code=400, detail="Invalid path: directory traversal or absolute paths are not allowed")
+    
     rel_path = path.lstrip("/")
     abs_path = os.path.join(SCAN_ROOT, rel_path)
     
